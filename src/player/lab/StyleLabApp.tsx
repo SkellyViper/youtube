@@ -123,7 +123,7 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
                   navigate(scene.slug);
                 }}
               >
-                <span className="lab-thumb">
+                <span className="story-thumb">
                   <StoryThumb scene={scene} />
                 </span>
                 <span className="lab-caption">

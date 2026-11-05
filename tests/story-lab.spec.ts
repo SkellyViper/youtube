@@ -177,7 +177,7 @@ test.describe('presenting the redesigned scenes', () => {
   });
 
   test('compare: the follower sits on the matching beat', async ({page}) => {
-    await page.goto('/style-lab/09-media-insert?compare=concept');
+    await page.goto('/style-lab/06-source?compare=concept');
     await ready(page);
     await page.keyboard.press('ArrowRight');
     await waitHolding(page, 1);
