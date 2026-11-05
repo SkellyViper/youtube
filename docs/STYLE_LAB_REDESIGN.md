@@ -203,19 +203,95 @@ See `src/styles/themes.ts`. Each theme sets palette roles, glow budget, bloom, f
 
 ## 7. Gallery, presenting, comparing
 
-_Filled in after implementation; see below._
+Open `/style-lab` (`npm run dev` → http://localhost:5173/style-lab, or `npm run present`).
+
+- **Episode scenes** (top): the ten redesigned scenes, each tile with its poster, what the viewer should understand, whether an Original exists, and the five theme swatches.
+- **Legacy experiments** (below): the original ten, unchanged, with their own viewer and keys.
+
+Scene viewer (`/style-lab/<slug>`):
+
+| Control | Keys | What it does |
+| --- | --- | --- |
+| Beats | `→` `←` `R` `Space` `Home` `End` | Unchanged presenter behaviour: play next beat and hold, back one checkpoint, replay, play through on export timing. |
+| Concept | `O` | Original (the legacy sample that attempted the same idea) or Redesign. Scenes without a legacy counterpart show Redesign only. |
+| Theme | `T` cycles | Neon Protocol, Infrared, Glacial, Ghost Terminal, Spectral. Remounts the composition with `inputProps.theme`; the timeline is unchanged. |
+| Compare | `C` | Off, **vs Original** or **vs Theme** (click again to cycle the second theme). The right pane is a follower Player that seeks to the matching beat fraction of its own timeline on every frame update, so both views sit on equivalent moments. |
+| Present | `F` | Fullscreen on the stage. `H` shows the beat HUD. |
+| Render | button | Copies the exact export command for the current selection (shown next to it). |
+| Scenes | `[` `]` `Esc`/`G` | Previous / next scene, back to the gallery. |
+
+The selection is in the URL: `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial#c=2`. Reloading restores it.
 
 ## 8. Export commands
 
-_Filled in after implementation; see below._
+The theme is a composition input prop, so the Player preview and the renderer share one code path. Compositions are registered as `story-<slug>` (Remotion Studio folder **Story**).
+
+```bash
+npm run story:render -- 04-replication --theme=infrared     # out/story/04-replication-infrared.mp4
+npm run story:render -- 04-replication --all-themes          # five MP4s
+npm run story:render -- all                                  # every scene, default theme
+npm run story:render -- 04-replication --concept=original    # the legacy counterpart (via scripts/lab.mjs)
+npm run story:render -- 02-wrong-project --fps=30            # documented fallback timing
+npm run story:stills -- 02-wrong-project --theme=ghost       # stills -> out/story/stills/
+npm run story:thumbs                                         # gallery posters (Remotion stills)
+npm run story:sheet                                          # contact sheet from rendered MP4s
+npx remotion render story-04-replication out/x.mp4 --props='{"theme":"spectral"}'
+```
+
+Every render is verified by `scripts/verify-video.mjs` (1920×1080, 60 fps, H.264 yuv420p BT.709, exact frame count, full decode). On machines without a GPU or without network access: `REMOTION_GL=swangle REMOTION_BROWSER_EXECUTABLE=/path/to/chrome npm run story:render -- …`.
+
+Preview tooling that does **not** render video: `node scripts/dev/preview.mjs <slug> [theme] [--frames=..|--every=..|--thumb]` screenshots the live Player at checkpoints and mid-beat frames and writes a contact sheet to `out/preview/`.
 
 ## 9. Verification
 
-_Filled in after implementation; see below._
+Done on this branch (in a GPU-less cloud container, Chromium + SwiftShader; see limitations):
+
+- `npm run typecheck` clean.
+- `tests/story-lab.spec.ts` (new): gallery sections and counts; opening a scene; URL carries concept/theme/compare and restores on reload; `→` plays each beat of S02 and S04 and stops on the exact checkpoint frame; holds do not drift; `←` and `R`; deterministic seeking (same frame → identical pixels); theme switch changes the picture but not the timeline; compare shows a follower on the matching beat; `F` fullscreen.
+- `tests/style-lab.spec.ts`, `tests/presenter.spec.ts`, `tests/timeline.spec.ts` (existing): the legacy gallery still lists ten samples, every legacy sample still walks beat by beat, the engine's frame math is unchanged.
+- Browser previews of all ten scenes × checkpoints and mid-beats were inspected by eye (`docs/redesign/checkpoints-neon.jpg`), plus S02 and S04 under all five themes (`docs/redesign/themes-s02-s04.jpg`) and the six Original-vs-Redesign pairs (`docs/redesign/original-vs-redesign.jpg`).
+- **Not done here: MP4 renders.** You asked for no renders in this session. `npm run story:render` is ready; a render of one 3D scene under SwiftShader takes about 20–40 minutes, so run it on a machine with a GPU.
+
+### The five questions, per scene
+
+| Scene | Main subject at a glance | Every object justified | Cause → effect visible | Flows, not slides | Works muted |
+| --- | --- | --- | --- | --- | --- |
+| S01 Developer | Yes: a game, then a person at a desk | Yes (cast list) | Agent writes → packet → new enemy | Camera pull-back overlaps the agent writing | Yes |
+| S02 Wrong project | Yes: the capsule | Yes | Send → wrong turn → far rack wakes; game slot stays empty | Camera follows the capsule | Yes |
+| S03 Keeps running | Yes: the closing window, then one lit bay | Yes | Close → dark → the other end still runs → pulse | One continuous climb | Yes |
+| S04 Replication | Yes: the agent, then the floor | Yes | Divide → travel → machines light as reached | Follow shot and crane-up overlap the spreading | Yes |
+| S05 Tests pass | Yes: the green list | Yes | Green → door opens → probes → one box unprobed → bug | Door swing overlaps probe draw-on | Yes |
+| S06 Source | Yes: the page | Yes | Node → page rises → sentence lit → docks | Inner camera and world dim overlap | Yes (real text) |
+| S07 Undetected | Yes: the green zone | Yes | Scan → ticks → pull back → one purple machine outside | Crane and ignition overlap | Yes |
+| S08 Kill switch | Yes: the key and the agent | Yes | Key out → line dies → agent stops; three keys → one out → runs | Camera pan carries the comparison | Yes (one tag) |
+| S09 Media insert | Yes: the photo/clip | Yes | World steps back → evidence → returns | Panels hand over | Yes |
+| S10 Callback | Yes: the game, John, the window | Yes | Normal life → far lights | One drifting camera | Yes |
+
+### Ranking (clarity · motion · identity · reusability, 1–5)
+
+| # | Scene | Clarity | Motion | Identity | Reuse | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | S02 The wrong project | 5 | 5 | 4 | 4 | The capsule, the junction and the long cable are the clearest cause-and-effect in the set. |
+| 2 | S04 Replication | 4 | 5 | 5 | 5 | Visible division, a followed copy, a floor of recognisable machines. The trademark 3D shot. |
+| 3 | S05 Tests pass | 5 | 4 | 4 | 4 | Door-open reveal is a reusable "behind the UI" move. |
+| 4 | S08 Kill switch | 5 | 4 | 4 | 5 | Cables, keys and pulses generalise to any dependency diagram. |
+| 5 | S07 Undetected | 4 | 4 | 5 | 4 | The bracketed zone + crane-up is the scan metaphor for future episodes. |
+| 6 | S10 Callback | 4 | 4 | 4 | 3 | Quiet and specific to this story. |
+| 7 | S03 Keeps running | 4 | 4 | 3 | 3 | The climb is good; the travel section is sparse. |
+| 8 | S01 Developer | 5 | 3 | 3 | 4 | Very clear, little cinematic ambition by design. |
+| 9 | S06 Source | 4 | 3 | 4 | 5 | Reuses the strongest legacy component; waiting for the real incident capture. |
+| 10 | S09 Media insert | 4 | 3 | 3 | 5 | Reusable system; the demo clip is a stand-in. |
+
+**The three scenes that best establish the trademark look:** S04 Replication (3D floor of machines, the dividing iris, cables as the carriers of everything), S02 The wrong project (one continuous 2D world with the desk, the capsule and the far hall), and S07 The undetected agent (the bracketed green zone against one purple light).
 
 ## 10. Limitations and next steps
 
-_Filled in after implementation; see below._
+- **Renders are pending** (by request). Run `npm run story:render -- all` and `--all-themes` for S02/S04 on a GPU machine, then `npm run story:sheet`.
+- **GPU-less verification.** All browser checks here ran under SwiftShader. Playwright actionability on the 3D scenes is slow there, so the interaction tests use 2D scenes; beat-walking tests cover S02 (2D) and S04 (3D).
+- **Real incident capture.** The OpenAI–Hugging Face source could not be fetched from this environment (no network). S06 reads `src/scenes/redesign/06-source/source.ts`; capture with `node scripts/lab-capture.mjs` and change one import. The S09 clip is a real screen recording of this project's gallery, labelled as such; replace it with licensed footage via `MediaInsert` props.
+- **The NASA clip** of legacy sample 08 is still missing from the repo (ignored by the old `*.mp4` rule; recipe in `SOURCES-media.md`). `public/lab/media/*.mp4` is now tracked.
+- **Build repair.** `src/videos/` was reconstructed from its consumers; layer ranges in the two episode definitions follow the beats each layer reads and should be eyeballed once against the original author's intent.
+- Polish candidates: S04's close-up agent is bright against the bay; S07's ticks glow hard right after popping; S05's door is a 2D skew rather than true perspective; S03's travel section could carry more environment.
 
 ## Appendix: authoring conventions for redesigned scenes
 
