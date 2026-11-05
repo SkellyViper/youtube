@@ -11,5 +11,7 @@ export * from './Chat';
 export * from './Workspace';
 export * from './Machines';
 export * from './DataCenter';
+export * from './MachinePlan';
+export * from './MediaInsert';
 export * from './episode';
 export * from './NightCity';

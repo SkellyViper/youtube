@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill} from 'remotion';
 import * as THREE from 'three';
 import {MirrorFloor, Reflect, SkyDome, StageLights} from '../../../components/cyber/three/Environment';
-import {hdr, structureProps} from '../../../components/cyber/three/materials';
+import {getHaloTexture, hdr, structureProps} from '../../../components/cyber/three/materials';
 import {projectPoint, useCameraRig, type Rig, type Vec3} from '../../../components/cyber/three/rig';
 import {ScanField, scanSince} from '../../../components/cyber/three/ScanField';
 import {GlowTube, curveThrough} from '../../../components/cyber/three/Signal3D';
@@ -62,12 +62,18 @@ const HALL_EDGES = HALLS.map(edgesOf);
 const CAM0: Rig = {position: [8.4, 3.4, 10.6], target: [-0.6, 1.0, 0], fov: 36};
 const RIG_TRACK = [
   {beat: 'ud-hall', to: {position: [7.6, 3.2, 9.6] as Vec3, target: [-1.2, 1.0, 0] as Vec3}, from: 0, until: 2.2},
-  // Pan with the sheet as it crosses, then begin to lift before the scan has quite finished.
+  // Pan with the sheet as it crosses the zone.
   {beat: 'ud-scan', to: {target: [1.2, 1.0, 0] as Vec3, position: [8.6, 3.4, 9.8] as Vec3}, from: 0.2, until: 2.5, easing: ease.inOut},
-  {beat: 'ud-scan', to: {position: [8.0, 5.0, 12.0] as Vec3, target: [0.6, 0.8, -1.5] as Vec3}, from: 2.3, until: 3.0, easing: ease.in},
-  {beat: 'ud-campus', to: {position: [5.0, 19.0, 28.0] as Vec3, target: [0, 0, -11.0] as Vec3, fov: 40}, from: 0, until: 3.0, easing: ease.out},
-  {beat: 'ud-hold', to: {position: [4.6, 21.0, 28.6] as Vec3, target: [0, 0, -11.6] as Vec3}, from: 0, until: 2.0, easing: ease.out},
 ];
+/**
+ * The crane is one continuous move: it begins while the scan is still
+ * retiring, carries through the whole of ud-campus and settles a little
+ * higher during the first second of ud-hold. One curve, so there is no hitch
+ * at the beat boundaries.
+ */
+const CRANE_LEAD = 0.5; // seconds before the end of ud-scan at which the lift begins
+const CRANE_SETTLE = 1.1; // seconds into ud-hold at which it is finally still
+const HIGH: Rig = {position: [2.4, 23.5, 19.0], target: [0, 0, -8.8], fov: 40};
 
 /** Seconds the sheet takes to cross the zone (progress 0 -> 1). */
 const SWEEP_SECONDS = 2.3;
@@ -109,7 +115,15 @@ export const UndetectedScene: React.FC = () => {
   const th = useTheme();
   const time = useActiveTime();
   const b = useBeats(['ud-hall', 'ud-scan', 'ud-campus', 'ud-hold']);
-  const rig = useCameraRig(CAM0, RIG_TRACK);
+  const track = useCameraRig(CAM0, RIG_TRACK);
+  const craneSeconds = CRANE_LEAD + b['ud-campus'].duration + CRANE_SETTLE;
+  const craneTime = seg(b['ud-scan'].time, b['ud-scan'].duration - CRANE_LEAD, b['ud-scan'].duration) * CRANE_LEAD + b['ud-campus'].time + Math.min(b['ud-hold'].time, CRANE_SETTLE);
+  const crane = ease.camera(clamp01(craneTime / craneSeconds));
+  const rig: Rig = {
+    position: [lerp(track.position[0], HIGH.position[0], crane), lerp(track.position[1], HIGH.position[1], crane), lerp(track.position[2], HIGH.position[2], crane)],
+    target: [lerp(track.target[0], HIGH.target[0], crane), lerp(track.target[1], HIGH.target[1], crane), lerp(track.target[2], HIGH.target[2], crane)],
+    fov: lerp(track.fov, HIGH.fov, crane),
+  };
   const safe = th.tone.safe;
   const mind = th.tone.mind;
 
@@ -121,7 +135,7 @@ export const UndetectedScene: React.FC = () => {
   const progress = b['ud-scan'].at(0.25, 0.25 + SWEEP_SECONDS, ease.linear);
   const retire = b['ud-scan'].at(2.6, 3.0, ease.in);
   const clean = b['ud-scan'].at(2.3, 2.9, ease.out); // the zone line settles to "clean"
-  const zoneLevel = lerp(0.85, 2.1 * th.glow, clean) * (0.3 + 0.7 * drawZone);
+  const zoneLevel = lerp(0.85, 1.7 * th.glow, clean) * (0.3 + 0.7 * drawZone);
   const sinceOf = (m: MachineSpec) => scanSince(SCAN, progress, [m.x, 0, m.z], SWEEP_SECONDS);
 
   // ---- beat 3: the campus, and the agent -------------------------------------
@@ -154,12 +168,12 @@ export const UndetectedScene: React.FC = () => {
                 position={[m.x, 0, m.z]}
                 yaw={m.yaw}
                 bay={m.bay}
-                power={inZone ? 0.75 : 0.25 + 0.2 * farLit + (isAgent ? 0.55 * ignite : 0)}
+                power={inZone ? 0.75 : 0.1 + 0.3 * farLit + (isAgent ? 0.6 * ignite : 0)}
                 agent={isAgent ? ignite : 0}
                 agentEnergy={1 + flare}
                 time={time}
                 seed={m.id}
-                lite={!inZone}
+                lite={!inZone && !isAgent}
               />
             );
           })}
@@ -197,9 +211,9 @@ export const UndetectedScene: React.FC = () => {
 
         {/* The agent's ignition: a brief purple breath on the floor around its rack, so the light reads from high up. */}
         {ignite > 0.001 ? (
-          <mesh position={[AGENT.x, 0.01, AGENT.z]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[1.4 + 0.6 * flare, 32]} />
-            <meshBasicMaterial color={hdr(mind.base, 1.2 * ignite)} transparent opacity={0.35 * ignite} depthWrite={false} />
+          <mesh position={[AGENT.x, 0.02, AGENT.z]} rotation={[-Math.PI / 2, 0, 0]} scale={4.6 + 1.2 * flare}>
+            <planeGeometry args={[1, 1]} />
+            <meshBasicMaterial map={getHaloTexture()} color={hdr(mind.base, 2.2 * ignite)} transparent opacity={0.75 * ignite} depthWrite={false} blending={THREE.AdditiveBlending} />
           </mesh>
         ) : null}
       </Stage3D>
@@ -208,21 +222,31 @@ export const UndetectedScene: React.FC = () => {
       {bracket > 0.001 ? (
         <svg width={1920} height={1080} style={{position: 'absolute', inset: 0, pointerEvents: 'none'}}>
           {(() => {
-            const arm = 34;
+            const arm = 36;
             const cx = zoneScreen.reduce((s, p) => s + p.x, 0) / 4;
             const cy = zoneScreen.reduce((s, p) => s + p.y, 0) / 4;
-            const corners = zoneScreen.map((p) => {
-              // Push each bracket a little outward from the zone's centre so it frames rather than covers.
-              const dx = p.x - cx;
-              const dy = p.y - cy;
-              const len = Math.hypot(dx, dy) || 1;
-              const x = p.x + (dx / len) * 22;
-              const y = p.y + (dy / len) * 22;
-              const sx = Math.sign(dx) || 1;
-              const sy = Math.sign(dy) || 1;
-              return `M${x} ${y - sy * arm}V${y}H${x - sx * arm}`;
+            const unit = (ax: number, ay: number) => {
+              const l = Math.hypot(ax, ay) || 1;
+              return [ax / l, ay / l] as const;
+            };
+            // Each bracket sits a little outside its corner and its two arms run along the zone's projected edges.
+            const corners = zoneScreen.map((p, i) => {
+              const prev = zoneScreen[(i + 3) % 4];
+              const next = zoneScreen[(i + 1) % 4];
+              const a = unit(prev.x - p.x, prev.y - p.y);
+              const c = unit(next.x - p.x, next.y - p.y);
+              const out = unit(p.x - cx, p.y - cy);
+              const x = p.x + out[0] * 18;
+              const y = p.y + out[1] * 18;
+              return `M${x + a[0] * arm} ${y + a[1] * arm}L${x} ${y}L${x + c[0] * arm} ${y + c[1] * arm}`;
             });
-            const edge = zoneScreen.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join('') + 'Z';
+            const edge =
+              zoneScreen
+                .map((p, i) => {
+                  const out = unit(p.x - cx, p.y - cy);
+                  return `${i === 0 ? 'M' : 'L'}${p.x + out[0] * 9} ${p.y + out[1] * 9}`;
+                })
+                .join('') + 'Z';
             const ar = 26;
             const aa = 11;
             const ax = agentScreen.x;
@@ -233,7 +257,7 @@ export const UndetectedScene: React.FC = () => {
                 <g opacity={bracket}>
                   <path d={edge} stroke={alpha(safe.base, 0.55)} strokeWidth={th.line} strokeDasharray="10 8" fill="none" />
                   {corners.map((d, i) => (
-                    <path key={i} d={d} stroke={safe.hot} strokeWidth={2.5} fill="none" strokeLinecap="square" />
+                    <path key={i} d={d} stroke={safe.hot} strokeWidth={2.5} fill="none" strokeLinecap="square" strokeLinejoin="miter" />
                   ))}
                 </g>
                 {agentScreen.visible ? (

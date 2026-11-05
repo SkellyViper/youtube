@@ -47,10 +47,10 @@ export const ZONE_HZ = 3.8;
 
 export const HALLS: readonly HallSpec[] = [
   {id: 0, cx: 0, cz: 0},
-  {id: 1, cx: -14, cz: -3},
-  {id: 2, cx: 14, cz: -3},
-  {id: 3, cx: -7.5, cz: -16},
-  {id: 4, cx: 7.5, cz: -16},
+  {id: 1, cx: -12.5, cz: -7.5},
+  {id: 2, cx: 12.5, cz: -7.5},
+  {id: 3, cx: -6.5, cz: -16.5},
+  {id: 4, cx: 6.5, cz: -16.5},
 ];
 
 /** Two rows of four; the scanned hall's kinds are fixed so the silhouettes read well up close. */
@@ -83,8 +83,8 @@ export const buildCampus = (seed = 71): MachineSpec[] => {
 
 export const CAMPUS = buildCampus();
 export const ZONE_MACHINES = CAMPUS.filter((m) => m.hall === 0);
-/** The hidden agent: a rack in the far-left hall, second row, so it sits near the top of the wide frame. */
-export const AGENT = CAMPUS.find((m) => m.hall === 3 && m.kind === 'rack' && m.z < HALLS[3].cz) ?? CAMPUS.find((m) => m.hall === 3)!;
+/** The hidden agent: a rack in the far-left hall, front row, so it sits in the upper part of the wide frame and is not the farthest thing in it. */
+export const AGENT = CAMPUS.find((m) => m.hall === 3 && m.kind === 'rack' && m.z > HALLS[3].cz) ?? CAMPUS.find((m) => m.hall === 3)!;
 
 /** The scan: a sheet that crosses the zone left to right, a little wider than the zone so the edge posts are met. */
 export const SCAN: ScanFieldSpec = {from: [-ZONE_HX - 0.5, 0, 0], to: [ZONE_HX + 0.5, 0, 0], width: ZONE_HZ * 2, height: 3.2};

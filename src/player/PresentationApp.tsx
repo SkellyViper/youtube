@@ -45,7 +45,9 @@ export const Presenter: React.FC<{
   readonly onKey?: (e: KeyboardEvent, ctx: PresenterContext) => boolean;
   /** Composition input props (e.g. `{theme}`); the same object a render passes as `inputProps`. */
   readonly inputProps?: Record<string, unknown>;
-}> = ({entry, fps = DEFAULT_FPS, initialCheckpoint = 0, initialHud = false, chrome, onKey, inputProps}) => {
+  /** Called with every frame the Player shows (for synchronised compare views). */
+  readonly onFrame?: (frame: number) => void;
+}> = ({entry, fps = DEFAULT_FPS, initialCheckpoint = 0, initialHud = false, chrome, onKey, inputProps, onFrame}) => {
   const timeline = useMemo(() => buildTimeline(entry.episode, fps), [entry, fps]);
   const width = entry.episode.width ?? 1920;
   const height = entry.episode.height ?? 1080;
@@ -75,6 +77,16 @@ export const Presenter: React.FC<{
   contextRef.current = context;
   const onKeyRef = useRef(onKey);
   onKeyRef.current = onKey;
+  const onFrameRef = useRef(onFrame);
+  onFrameRef.current = onFrame;
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    const handler = (e: {detail: {frame: number}}) => onFrameRef.current?.(e.detail.frame);
+    player.addEventListener('frameupdate', handler);
+    onFrameRef.current?.(player.getCurrentFrame());
+    return () => player.removeEventListener('frameupdate', handler);
+  }, [timeline]);
 
   // Keyboard controls.
   useEffect(() => {
