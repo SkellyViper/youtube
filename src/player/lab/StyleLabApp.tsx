@@ -1,5 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {LAB_SAMPLES, findLabSample, labInfo, type LabSample} from '../../videos/style-lab/registry';
+import {findStoryScene, type StoryScene} from '../../videos/style-lab/redesign';
+import {getTheme} from '../../styles/themes';
 import {Presenter, type PresenterContext} from '../PresentationApp';
 import './lab.css';
 
@@ -42,11 +44,14 @@ export const StyleLabApp: React.FC = () => {
   }, []);
 
   const sample = findLabSample(slug);
+  const story = sample ? undefined : findStoryScene(slug);
   useEffect(() => {
-    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : 'Style Lab';
-  }, [sample]);
+    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : story ? `${story.title} · Style Lab` : 'Style Lab';
+  }, [sample, story]);
 
-  return sample ? <LabViewer key={sample.slug} sample={sample} navigate={navigate} /> : <LabGallery navigate={navigate} />;
+  if (sample) return <LabViewer key={sample.slug} sample={sample} navigate={navigate} />;
+  if (story) return <StoryViewer key={story.slug} scene={story} navigate={navigate} />;
+  return <LabGallery navigate={navigate} />;
 };
 
 /* ------------------------------------------------------------------ gallery */
@@ -204,6 +209,29 @@ const LabViewer: React.FC<{readonly sample: LabSample; readonly navigate: (slug:
       chrome={(ctx) => <LabChrome ctx={ctx} sample={sample} navigate={navigate} sibling={sibling} />}
     />
   );
+};
+
+/** Viewer for a redesigned scene: same presenter, theme from `?theme=`. (The full concept/theme UI lands with the gallery redesign.) */
+const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigate: (slug: string | null) => void}> = ({scene, navigate}) => {
+  const theme = getTheme(new URLSearchParams(window.location.search).get('theme')).id;
+  const entry = useMemo(() => ({id: scene.id, episode: scene.episode, component: scene.component as React.ComponentType}), [scene]);
+  const inputProps = useMemo(() => ({theme}), [theme]);
+  const [initial] = useState(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return {checkpoint: Number(hash.get('c') ?? 0) || 0, hud: new URLSearchParams(window.location.search).has('hud')};
+  });
+  const onKey = useCallback(
+    (e: KeyboardEvent): boolean => {
+      if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') {
+        if (e.key === 'Escape' && document.fullscreenElement) return false;
+        navigate(null);
+        return true;
+      }
+      return false;
+    },
+    [navigate],
+  );
+  return <Presenter entry={entry} inputProps={inputProps} initialCheckpoint={initial.checkpoint} initialHud={initial.hud} onKey={onKey} />;
 };
 
 /** Buttons that never take keyboard focus, so Space / arrows always reach the presenter. */

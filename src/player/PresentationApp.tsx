@@ -43,7 +43,9 @@ export const Presenter: React.FC<{
   readonly chrome?: (ctx: PresenterContext) => React.ReactNode;
   /** Return true if the key was handled. Called before the built-in keys. */
   readonly onKey?: (e: KeyboardEvent, ctx: PresenterContext) => boolean;
-}> = ({entry, fps = DEFAULT_FPS, initialCheckpoint = 0, initialHud = false, chrome, onKey}) => {
+  /** Composition input props (e.g. `{theme}`); the same object a render passes as `inputProps`. */
+  readonly inputProps?: Record<string, unknown>;
+}> = ({entry, fps = DEFAULT_FPS, initialCheckpoint = 0, initialHud = false, chrome, onKey, inputProps}) => {
   const timeline = useMemo(() => buildTimeline(entry.episode, fps), [entry, fps]);
   const width = entry.episode.width ?? 1920;
   const height = entry.episode.height ?? 1080;
@@ -183,6 +185,12 @@ export const Presenter: React.FC<{
       prev: () => presenterRef.current.prev(),
       replay: () => presenterRef.current.replay(),
       goTo: (c: number) => presenterRef.current.goTo(c),
+      /** Automation only: show an arbitrary frame (paused). Used by preview tooling and tests. */
+      seek: (frame: number) => {
+        presenterRef.current.pause();
+        playerRef.current?.pause();
+        playerRef.current?.seekTo(Math.max(0, Math.min(timeline.durationInFrames - 1, Math.round(frame))));
+      },
       playTimed: () => presenterRef.current.playTimed(),
       pause: () => presenterRef.current.pause(),
     };
@@ -202,7 +210,8 @@ export const Presenter: React.FC<{
     >
       <Player
         ref={playerRef}
-        component={entry.component}
+        component={entry.component as React.ComponentType<Record<string, unknown>>}
+        inputProps={inputProps}
         durationInFrames={timeline.durationInFrames}
         fps={fps}
         compositionWidth={width}
