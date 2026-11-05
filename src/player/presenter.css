@@ -1,0 +1,106 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  background: #000;
+}
+
+.stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Developer HUD: deliberately plain, outside the composition. */
+.hud {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 360px;
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  padding: 14px 16px;
+  background: rgba(10, 10, 12, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #d8d4cc;
+  font: 12px/1.45 ui-monospace, 'JetBrains Mono', Consolas, monospace;
+  z-index: 10;
+}
+.hud-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.hud-grid {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 2px 8px;
+}
+.hud-grid span {
+  color: #7d828a;
+}
+.hud-grid b {
+  font-weight: 500;
+}
+.hud-playing {
+  color: #8fe3cf;
+}
+.hud-holding {
+  color: #ffd27a;
+}
+.hud-notes {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.hud-notes span {
+  color: #7d828a;
+}
+.hud-beats {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.hud-beats button {
+  all: unset;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #8a8f97;
+}
+.hud-beats button:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.hud-beats i {
+  font-style: normal;
+  color: #555a62;
+  margin-right: 6px;
+}
+.hud-beats em {
+  float: right;
+  font-style: normal;
+  color: #4d525a;
+}
+.hud-beats .is-done button {
+  color: #d8d4cc;
+}
+.hud-beats .is-playing button {
+  color: #8fe3cf;
+  background: rgba(143, 227, 207, 0.1);
+}
+.hud-keys {
+  margin-top: 10px;
+  color: #6b7078;
+}

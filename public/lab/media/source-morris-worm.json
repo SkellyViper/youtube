@@ -1,0 +1,113 @@
+{
+  "id": "source-morris-worm",
+  "src": "lab/media/source-morris-worm.png",
+  "kind": "web",
+  "url": "https://en.wikipedia.org/wiki/Morris_worm",
+  "capturedOn": "2026-11-04",
+  "capturedAt": "2026-11-05T02:11:29.376Z",
+  "licence": "CC BY-SA 4.0 (text); Wikipedia contributors",
+  "title": "Morris worm - Wikipedia",
+  "permalink": "https://en.wikipedia.org/w/index.php?oldid=1376534515",
+  "viewport": {
+    "width": 1500,
+    "height": 940
+  },
+  "deviceScaleFactor": 2,
+  "naturalWidth": 3000,
+  "naturalHeight": 1880,
+  "regions": {
+    "passage": {
+      "x": 528,
+      "y": 482.78,
+      "width": 1222.03,
+      "height": 86,
+      "lines": [
+        {
+          "x": 1200.44,
+          "y": 482.78,
+          "width": 540.72,
+          "height": 34
+        },
+        {
+          "x": 528,
+          "y": 534.78,
+          "width": 1222.03,
+          "height": 34
+        }
+      ],
+      "text": "It is one of the oldest computer worms distributed via the Internet, and the first to gain significant mainstream media attention."
+    },
+    "paragraph": {
+      "x": 528,
+      "y": 378.78,
+      "width": 1222.03,
+      "height": 398,
+      "lines": [
+        {
+          "x": 528,
+          "y": 378.78,
+          "width": 1147.03,
+          "height": 34
+        },
+        {
+          "x": 528,
+          "y": 430.78,
+          "width": 1183.38,
+          "height": 34
+        },
+        {
+          "x": 528,
+          "y": 474.13,
+          "width": 1213.16,
+          "height": 42.66
+        },
+        {
+          "x": 528,
+          "y": 534.78,
+          "width": 1222.03,
+          "height": 34
+        },
+        {
+          "x": 528,
+          "y": 586.78,
+          "width": 1204.25,
+          "height": 34
+        },
+        {
+          "x": 528,
+          "y": 630.13,
+          "width": 1209.06,
+          "height": 42.66
+        },
+        {
+          "x": 528,
+          "y": 682.13,
+          "width": 1080.94,
+          "height": 42.66
+        },
+        {
+          "x": 528,
+          "y": 742.78,
+          "width": 670,
+          "height": 34
+        }
+      ],
+      "text": "The Morris worm or Internet worm of November 2, 1988, was a malicious self-replicating computer program that affected VAX computers and SUN-3 workstations running the 4.2 and 4.3 Berkeley UNIX code.[1] It is one of the oldest computer worms distributed via the Internet, and the first to gain significant mainstream media attention. The incident resulted in the first felony conviction in the US unde..."
+    },
+    "title": {
+      "x": 528,
+      "y": 138.09,
+      "width": 335.19,
+      "height": 64,
+      "lines": [
+        {
+          "x": 528,
+          "y": 138.09,
+          "width": 335.19,
+          "height": 64
+        }
+      ],
+      "text": "Morris worm"
+    }
+  }
+}

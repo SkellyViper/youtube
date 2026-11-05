@@ -1,0 +1,23 @@
+{
+  "id": "source-nist-ai-rmf-p1",
+  "src": "lab/media/source-nist-ai-rmf-p1.png",
+  "kind": "pdf",
+  "url": "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf",
+  "capturedOn": "2026-11-04",
+  "capturedAt": "2026-11-05T02:11:31.425Z",
+  "licence": "Public domain (work of the US Government, NIST); not subject to copyright in the United States",
+  "title": "Artificial Intelligence Risk Management Framework (AI RMF 1.0)",
+  "page": 6,
+  "pages": 48,
+  "naturalWidth": 1700,
+  "naturalHeight": 2200,
+  "regions": {
+    "heading": {
+      "x": 250,
+      "y": 182.25,
+      "width": 412.12,
+      "height": 57.38,
+      "text": "Executive Summary"
+    }
+  }
+}
