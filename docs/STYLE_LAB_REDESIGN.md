@@ -216,3 +216,16 @@ _Filled in after implementation; see below._
 ## 10. Limitations and next steps
 
 _Filled in after implementation; see below._
+
+## Appendix: authoring conventions for redesigned scenes
+
+1. One folder per scene: `src/scenes/redesign/<nn-slug>/index.tsx` exports `episode` (`defineEpisode`) and `Sample = storyComposition(episode)`. The scene's visuals are **layers** (`layers: [{id: 'world', component: X, z: 1}, {id: 'grade', component: GradeLayer, z: 100}]`), so nothing unmounts between beats.
+2. The file starts with a **cast list** comment: every prominent object, what it stands for, why it is there.
+3. Four narrative phases, usually 4 beats: setup → action → consequence → hold. Beat ids are prefixed per scene (`wp-`, `rp-`, …). Durations 2–3.4 s, `defaultHold` 0.7, 5–13 s total.
+4. Motion comes only from `useBeats`, `useActiveTime`, `useCamera`/`useCameraRig`, `useScalarTrack`. No CSS transitions, timers or `Math.random()` (`createRandom(seed)`).
+5. Colours come from `useTheme()` roles (`system`, `mind`, `threat`, `safe`, `human`), never hexes, except inside the game (its own palette) and real media (true colour).
+6. 2D scenes draw one world inside `<Canvas><World cam={cam}>` and move the camera; 3D scenes use `Stage3D` + `useCameraRig`, with `th.bloom`, `th.fog`, `th.color.void`.
+7. Overlap: start the next element's entrance before the current one has settled; let the camera travel with the thing that travels.
+8. Preview in the browser, never by rendering: `npm run dev`, then `node scripts/dev/preview.mjs <slug> [theme]` writes checkpoint and mid-beat screenshots and a contact sheet to `out/preview/`. Look at them.
+9. Scale for a phone: the main subject ≥ ~30 % of the frame at each checkpoint; silhouettes are solid fills with a lit edge, not glow alone. About three glowing things per frame.
+10. Almost no text: real source text, UI words only where the UI is the subject, the occasional one-word tag.

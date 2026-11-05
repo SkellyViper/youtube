@@ -51,6 +51,7 @@ export const StyleLabApp: React.FC = () => {
 
   if (sample) return <LabViewer key={sample.slug} sample={sample} navigate={navigate} />;
   if (story) return <StoryViewer key={story.slug} scene={story} navigate={navigate} />;
+  if (slug && DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} navigate={navigate} />;
   return <LabGallery navigate={navigate} />;
 };
 
@@ -209,6 +210,24 @@ const LabViewer: React.FC<{readonly sample: LabSample; readonly navigate: (slug:
       chrome={(ctx) => <LabChrome ctx={ctx} sample={sample} navigate={navigate} sibling={sibling} />}
     />
   );
+};
+
+/** Any scene folder under src/scenes/redesign can be previewed before it is registered (authoring aid). */
+const DEV_SCENES = import.meta.glob('../../scenes/redesign/*/index.tsx') as Record<string, () => Promise<{episode: StoryScene['episode']; Sample: StoryScene['component']}>>;
+
+const DevStoryViewer: React.FC<{readonly slug: string; readonly navigate: (slug: string | null) => void}> = ({slug, navigate}) => {
+  const [scene, setScene] = useState<StoryScene | null>(null);
+  useEffect(() => {
+    let live = true;
+    DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]().then((mod) => {
+      if (!live) return;
+      setScene({id: mod.episode.id, slug, number: 0, title: mod.episode.title, kind: '2D', understand: '', idea: '', episode: mod.episode, component: mod.Sample, status: 'built'});
+    });
+    return () => {
+      live = false;
+    };
+  }, [slug]);
+  return scene ? <StoryViewer scene={scene} navigate={navigate} /> : null;
 };
 
 /** Viewer for a redesigned scene: same presenter, theme from `?theme=`. (The full concept/theme UI lands with the gallery redesign.) */
