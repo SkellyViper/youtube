@@ -12,3 +12,4 @@ export * from './Workspace';
 export * from './Machines';
 export * from './DataCenter';
 export * from './episode';
+export * from './NightCity';

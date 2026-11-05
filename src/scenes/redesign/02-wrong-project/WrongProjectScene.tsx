@@ -1,6 +1,5 @@
 import React from 'react';
 import {AbsoluteFill} from 'remotion';
-import {Curve2} from '../../../components/cyber/svg/curve';
 import {
   Cable,
   Canvas,
@@ -11,8 +10,6 @@ import {
   StoryBackdrop,
   Workspace,
   World,
-  AGENT_SCREEN,
-  GAME_SCREEN,
   clamp01,
   ease,
   lerp,
@@ -22,6 +19,7 @@ import {
 import {useActiveTime, useBeats, useCamera} from '../../../engine';
 import {alpha} from '../../../styles/cyber';
 import {useTheme} from '../../../styles/ThemeContext';
+import {BAY_Y, CLOUD, EXIT, GHOST, HALL, JUNCTION} from '../shared/deskWorld';
 
 /**
  * S02 · The wrong project (2D, one continuous world).
@@ -50,27 +48,6 @@ import {useTheme} from '../../../styles/ThemeContext';
  *   wp-reveal   pull back: desk lower left, lit hall upper right, the cable
  *               between them, and the empty slot in the game.
  */
-
-const HALL = {x: 2750, y: -1750, s: 1.05};
-/** Centre of the middle rack's open bay (see Rack: bay rows 4..8 of 14). */
-const BAY_Y = HALL.y - (600 - 267) * HALL.s;
-const TRAY_Y = HALL.y - 682 * HALL.s;
-const JUNCTION = {x: 980, y: -760};
-
-/** Prompt bubble (resting) -> out of the top of the agent monitor -> junction. */
-const EXIT = Curve2.route(
-  [
-    {x: AGENT_SCREEN.x + AGENT_SCREEN.w - 22 - 135, y: AGENT_SCREEN.y + AGENT_SCREEN.h - 92 - 104 - 28 + 52},
-    {x: AGENT_SCREEN.x + AGENT_SCREEN.w - 22 - 135, y: -300},
-    {x: JUNCTION.x, y: AGENT_SCREEN.y - 22},
-    JUNCTION,
-  ],
-  90,
-);
-/** Where it should have gone: a short run to the game monitor. */
-const GHOST = Curve2.route([JUNCTION, {x: GAME_SCREEN.x + GAME_SCREEN.w / 2, y: JUNCTION.y}, {x: GAME_SCREEN.x + GAME_SCREEN.w / 2, y: GAME_SCREEN.y - 24}], 90);
-/** Where it went: up the wall, along the tray, down into the middle rack. */
-const CLOUD = Curve2.route([JUNCTION, {x: 1600, y: JUNCTION.y}, {x: 1600, y: TRAY_Y}, {x: HALL.x, y: TRAY_Y}, {x: HALL.x, y: BAY_Y}], 110);
 
 const CAM_INITIAL = {x: 980, y: -40, zoom: 1.15};
 const CAM_TRACK = [
