@@ -1,5 +1,7 @@
 import React from 'react';
-import {alpha, cyber, tone as toneOf, type Tone} from '../../../styles/cyber';
+import {alpha, cyber, type Tone} from '../../../styles/cyber';
+import {useTheme} from '../../../styles/ThemeContext';
+import {themeTone} from '../../../styles/themes';
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const seg = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
@@ -80,8 +82,9 @@ export const CyberFrame: React.FC<CyberFrameProps> = ({
   overlay,
   children,
 }) => {
+  const theme = useTheme();
   if (build <= 0.001 || opacity <= 0.001) return null;
-  const t = toneOf(tone);
+  const t = themeTone(theme, tone);
   const corners = seg(build, 0, 0.45);
   const lines = seg(build, 0.2, 0.9);
   const spine = seg(build, 0.55, 1);
@@ -214,8 +217,9 @@ export const RegionHighlight: React.FC<{
   readonly dim?: number;
   readonly pad?: number;
 }> = ({x, y, width, height, progress, tone = 'system', dim = 0.62, pad = 10}) => {
+  const theme = useTheme();
   if (progress <= 0.001) return null;
-  const t = toneOf(tone);
+  const t = themeTone(theme, tone);
   const p = clamp01(progress);
   const X = x - pad;
   const Y = y - pad;

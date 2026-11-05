@@ -13,7 +13,7 @@ Both modes mount the same composition component and read the same timeline. Noth
 
 The included demo is *"Not detected ≠ does not exist"*: 4 scenes, 11 beats, about 38.7 s when exported.
 
-The **Style Lab** (`/style-lab`) holds ten short cyberpunk motion-design experiments for the channel's look, built on the same engine. See [docs/STYLE_LAB.md](docs/STYLE_LAB.md).
+The **Style Lab** (`/style-lab`) holds the channel's visual language in motion: ten story-driven scenes from the first episode, switchable between five visual identities and comparable with the original ten experiments. See [docs/STYLE_LAB_REDESIGN.md](docs/STYLE_LAB_REDESIGN.md) (redesign, themes, gallery, export) and [docs/STYLE_LAB.md](docs/STYLE_LAB.md) (the original experiments).
 
 ---
 
@@ -47,6 +47,9 @@ On the first render, Remotion downloads its own headless Chrome automatically. F
 | `npm run lab:thumbs` | Style Lab: gallery thumbnails (`public/lab/thumbs/`). |
 | `npm run lab:check` | Style Lab: decodes the MP4s and checks for black frames, flicker and moving holds. |
 | `npm run lab:frames`, `npm run lab:sheet` | Style Lab: key frames from the MP4s, and a contact sheet of all ten. |
+| `npm run story:render -- 04-replication --theme=infrared` | Redesign: render one scene in one theme (`--all-themes`, `all`, `--concept=original`, `--fps=30`). |
+| `npm run story:stills`, `npm run story:thumbs`, `npm run story:sheet` | Redesign: stills, gallery posters, contact sheet. |
+| `npm run story:preview -- 04-replication neon` | Redesign: screenshots from the live Player (no render) with a contact sheet. |
 
 > **NODE_ENV:** If your shell exports `NODE_ENV=development`, `vite build` would normally bundle React's development build, which is about 5× slower. `vite.config.ts` forces production for builds, so `npm run present` is always fast.
 
@@ -76,6 +79,7 @@ URL options:
 - `?episode=NotDetected`: choose an episode from `src/videos/registry.ts`.
 - `?fps=30`: preview the 30 fps timing.
 - `/style-lab`: the Style Lab gallery. `/style-lab/03-swarm` opens one sample in the presenter (same keys, plus `[` / `]` for the previous / next sample and `Esc` or `G` for the gallery).
+- `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial`: a redesigned scene with its concept, theme and comparison (`O`, `T`, `C` keys).
 
 ## Architecture
 
@@ -212,7 +216,7 @@ The render script bundles, renders, encodes and then verifies:
 
 ## Testing
 
-`npm test` runs Playwright. It starts the dev server automatically, or reuses one already running on port 5173.
+`npm test` runs Playwright. It starts the dev server automatically, or reuses one already running on port 5173. On a machine without a GPU or without Playwright's own browser: `PLAYWRIGHT_GL=swiftshader PLAYWRIGHT_CHROMIUM=/path/to/chrome npm test`.
 
 - **Timeline unit tests:** frame math, checkpoint continuity, clamped holds, spring landing, track sequencing.
 - **Presentation tests:**

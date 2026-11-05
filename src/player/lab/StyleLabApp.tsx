@@ -1,5 +1,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {LAB_SAMPLES, findLabSample, labInfo, type LabSample} from '../../videos/style-lab/registry';
+import {findStoryScene, STORY_SCENES, type StoryScene} from '../../videos/style-lab/redesign';
+import {THEMES, THEME_IDS} from '../../styles/themes';
+import {StoryViewer} from './StoryViewer';
 import {Presenter, type PresenterContext} from '../PresentationApp';
 import './lab.css';
 
@@ -42,11 +45,15 @@ export const StyleLabApp: React.FC = () => {
   }, []);
 
   const sample = findLabSample(slug);
+  const story = sample ? undefined : findStoryScene(slug);
   useEffect(() => {
-    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : 'Style Lab';
-  }, [sample]);
+    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : story ? `${story.title} · Style Lab` : 'Style Lab';
+  }, [sample, story]);
 
-  return sample ? <LabViewer key={sample.slug} sample={sample} navigate={navigate} /> : <LabGallery navigate={navigate} />;
+  if (sample) return <LabViewer key={sample.slug} sample={sample} navigate={navigate} />;
+  if (story) return <StoryViewer key={story.slug} scene={story} navigate={navigate} />;
+  if (slug && DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} navigate={navigate} />;
+  return <LabGallery navigate={navigate} />;
 };
 
 /* ------------------------------------------------------------------ gallery */
@@ -91,13 +98,58 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
       <header className="lab-head">
         <div>
           <h1>Style Lab</h1>
-          <p>Ten motion experiments for the channel&rsquo;s look. Open one, then press the right arrow to play it beat by beat.</p>
+          <p>The channel&rsquo;s visual language, in motion. Open a scene, then press the right arrow to play it beat by beat.</p>
         </div>
         <nav aria-label="Other episodes">
           <a href="/">Not detected</a>
           <a href="/?episode=RogueAgent">Rogue agent</a>
         </nav>
       </header>
+      <section className="lab-section" aria-labelledby="story-h">
+        <div className="lab-section-head">
+          <h2 id="story-h">Episode scenes · story-driven redesign</h2>
+          <p>Ten scenes from the first video. Open one, pick Original or Redesign, a theme, and a comparison.</p>
+        </div>
+        <ol className="lab-grid">
+          {STORY_SCENES.map((scene) => (
+            <li key={scene.slug}>
+              <a
+                className="story-tile"
+                href={`${BASE}/${scene.slug}`}
+                data-testid={`story-tile-${scene.slug}`}
+                onClick={(e) => {
+                  if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+                  e.preventDefault();
+                  navigate(scene.slug);
+                }}
+              >
+                <span className="story-thumb">
+                  <StoryThumb scene={scene} />
+                </span>
+                <span className="lab-caption">
+                  <span className="lab-num">S{num(scene.number)}</span>
+                  <span className="lab-title">{scene.title}</span>
+                  <span className={`lab-kind lab-kind-${scene.kind.toLowerCase()}`}>{scene.kind}</span>
+                </span>
+                <span className="story-tile-understand">{scene.understand}</span>
+                <span className="story-tile-meta">
+                  <span className={`pill ${scene.legacy ? 'is-on' : ''}`}>{scene.legacy ? 'Original + Redesign' : 'Redesign only'}</span>
+                  <span className="story-swatches" aria-hidden="true">
+                    {THEME_IDS.map((id) => (
+                      <i key={id} style={{background: THEMES[id].tone.mind.base}} title={THEMES[id].name} />
+                    ))}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+      <section className="lab-section" aria-labelledby="legacy-h">
+        <div className="lab-section-head">
+          <h2 id="legacy-h">Legacy experiments · the original ten</h2>
+          <p>Kept as they were. Samples that match a scene brief also open as that scene's Original concept.</p>
+        </div>
       <ol className="lab-grid">
         {LAB_SAMPLES.map((sample, i) => (
           <li key={sample.slug}>
@@ -127,6 +179,7 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
           </li>
         ))}
       </ol>
+      </section>
       <footer className="lab-foot">
         <span>
           <kbd>1</kbd>&ndash;<kbd>0</kbd> open a sample
@@ -152,6 +205,13 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
       </footer>
     </main>
   );
+};
+
+/** Poster still of a redesigned scene (`node scripts/story.mjs thumbs`); falls back to the number. */
+const StoryThumb: React.FC<{readonly scene: StoryScene}> = ({scene}) => {
+  const [missing, setMissing] = useState(false);
+  if (missing) return <span className="lab-thumb-missing">S{num(scene.number)}</span>;
+  return <img src={`/lab/thumbs/story-${scene.slug}.jpg`} alt="" width={960} height={540} loading="lazy" onError={() => setMissing(true)} />;
 };
 
 /** Poster still (generated by `npm run lab:thumbs`); falls back to the number if it is missing. */
@@ -204,6 +264,24 @@ const LabViewer: React.FC<{readonly sample: LabSample; readonly navigate: (slug:
       chrome={(ctx) => <LabChrome ctx={ctx} sample={sample} navigate={navigate} sibling={sibling} />}
     />
   );
+};
+
+/** Any scene folder under src/scenes/redesign can be previewed before it is registered (authoring aid). */
+const DEV_SCENES = import.meta.glob('../../scenes/redesign/*/index.tsx') as Record<string, () => Promise<{episode: StoryScene['episode']; Sample: StoryScene['component']}>>;
+
+const DevStoryViewer: React.FC<{readonly slug: string; readonly navigate: (slug: string | null) => void}> = ({slug, navigate}) => {
+  const [scene, setScene] = useState<StoryScene | null>(null);
+  useEffect(() => {
+    let live = true;
+    DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]().then((mod) => {
+      if (!live) return;
+      setScene({id: mod.episode.id, slug, number: 0, title: mod.episode.title, kind: '2D', understand: '', idea: '', episode: mod.episode, component: mod.Sample, status: 'built'});
+    });
+    return () => {
+      live = false;
+    };
+  }, [slug]);
+  return scene ? <StoryViewer scene={scene} navigate={navigate} /> : null;
 };
 
 /** Buttons that never take keyboard focus, so Space / arrows always reach the presenter. */

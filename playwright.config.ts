@@ -27,7 +27,16 @@ export default defineConfig({
         viewport: {width: 1920, height: 1080},
         deviceScaleFactor: 1,
         // The Style Lab's 3D samples need WebGL; use the GPU through ANGLE when there is one.
-        launchOptions: {args: ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']},
+        // On GPU-less Linux CI set PLAYWRIGHT_GL=swiftshader; PLAYWRIGHT_CHROMIUM points at a local Chromium build.
+        launchOptions: {
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM || undefined,
+          args: [
+            '--enable-gpu',
+            '--ignore-gpu-blocklist',
+            ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : []),
+            ...(process.env.PLAYWRIGHT_GL === 'swiftshader' ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : []),
+          ],
+        },
       },
     },
   ],

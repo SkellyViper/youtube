@@ -1,5 +1,7 @@
 import React from 'react';
-import {alpha, cyber, mix} from '../../../styles/cyber';
+import {alpha, mix} from '../../../styles/cyber';
+import {useTheme} from '../../../styles/ThemeContext';
+import {agentPalette} from '../../../styles/themes';
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const smooth = (t: number) => {
@@ -43,8 +45,9 @@ export const AgentGlyph: React.FC<{
   readonly calm?: number;
   readonly halo?: boolean;
 }> = ({x, y, r = 90, open = 1, energy = 1, spin = 0, threat = 0, calm = 0, halo = true}) => {
+  const theme = useTheme();
   if (open <= 0.001) return null;
-  const c = cyber.color;
+  const c = agentPalette(theme);
   const base = threat > 0 ? mix(c.purple, c.red, threat) : mix(c.purple, c.blue, calm);
   const hot = threat > 0 ? mix(c.purpleHot, c.redHot, threat) : mix(c.purpleHot, c.blueHot, calm);
   const haloHex = threat > 0.5 ? c.red : calm > 0.5 ? c.blue : c.purple;
@@ -55,9 +58,9 @@ export const AgentGlyph: React.FC<{
     <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)})`} fill="none" strokeLinecap="butt">
       {halo ? (
         <>
-          <circle r={r * 1.5} fill={alpha(haloHex, 0.05 * e * coreOpen)} />
-          <circle r={r * 0.82} fill={alpha(haloHex, 0.09 * e * coreOpen)} />
-          <circle r={r * 0.4} fill={alpha(haloHex, 0.2 * e * coreOpen)} />
+          <circle r={r * 1.5} fill={alpha(haloHex, 0.05 * e * coreOpen * theme.glow)} />
+          <circle r={r * 0.82} fill={alpha(haloHex, 0.09 * e * coreOpen * theme.glow)} />
+          <circle r={r * 0.4} fill={alpha(haloHex, 0.2 * e * coreOpen * theme.glow)} />
         </>
       ) : null}
       {RINGS.map((ring, k) => {

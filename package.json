@@ -23,7 +23,12 @@
     "lab:frames": "node scripts/lab.mjs frames",
     "lab:sheet": "node scripts/lab.mjs sheet",
     "lab:check": "node scripts/lab.mjs check",
-    "lab:compare": "node scripts/lab.mjs compare"
+    "lab:compare": "node scripts/lab.mjs compare",
+    "story:render": "node scripts/story.mjs render",
+    "story:stills": "node scripts/story.mjs stills",
+    "story:thumbs": "node scripts/story.mjs thumbs",
+    "story:sheet": "node scripts/story.mjs sheet",
+    "story:preview": "node scripts/dev/preview.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.540",

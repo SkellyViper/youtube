@@ -12,8 +12,11 @@ coverage/
 # Remotion renders / exports
 renders/
 rendered/
-videos/
+# Only top-level render output; `videos/` alone also matched src/videos/ (source code).
+/videos/
 *.mp4
+# ...but keep small, licensed media assets the scenes ship with
+!public/lab/media/*.mp4
 *.mov
 *.webm
 *.gif

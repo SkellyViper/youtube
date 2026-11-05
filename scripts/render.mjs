@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler';
-import {ensureBrowser, renderMedia, selectComposition} from '@remotion/renderer';
+import {renderMedia, selectComposition} from '@remotion/renderer';
+import {browserExecutable, defaultGl, ensureBrowser} from './browser.mjs';
 import {verifyVideo} from './verify-video.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,7 +29,8 @@ const serveUrl = await bundle({
   entryPoint: path.join(root, 'src/remotion/index.ts'),
   publicDir: path.join(root, 'public'),
 });
-const composition = await selectComposition({serveUrl, id});
+const chromiumOptions = {gl: defaultGl};
+const composition = await selectComposition({serveUrl, id, browserExecutable, chromiumOptions});
 console.log(
   `[render] ${id}: ${composition.width}×${composition.height} @ ${composition.fps}fps, ` +
     `${composition.durationInFrames} frames (${(composition.durationInFrames / composition.fps).toFixed(2)}s), concurrency ${concurrency}`,
@@ -46,6 +48,8 @@ await renderMedia({
   colorSpace: 'bt709',
   x264Preset: 'slow',
   concurrency,
+  browserExecutable,
+  chromiumOptions,
   frameRange: frameRange ? [frameRange[0], frameRange[1]] : null,
   overwrite: true,
   onProgress: ({progress, renderedFrames, encodedFrames}) => {

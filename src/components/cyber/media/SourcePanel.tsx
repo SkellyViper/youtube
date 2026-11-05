@@ -1,6 +1,8 @@
 import React from 'react';
 import {Easing, Img, staticFile} from 'remotion';
-import {alpha, cyber, motion, tone as toneOf, type Tone} from '../../../styles/cyber';
+import {alpha, cyber, motion, type Tone} from '../../../styles/cyber';
+import {useTheme} from '../../../styles/ThemeContext';
+import {themeTone} from '../../../styles/themes';
 import {CyberFrame, RegionHighlight} from '../frame/CyberFrame';
 import {fitMedia, frameFor, type Rect} from '../frame/fit';
 
@@ -75,8 +77,9 @@ export const PassageHighlight: React.FC<{
   readonly dim?: number;
   readonly pad?: number;
 }> = ({lines, progress, tone = 'system', dim = 0.62, pad = 10}) => {
+  const theme = useTheme();
   if (progress <= 0.001 || lines.length === 0) return null;
-  const t = toneOf(tone);
+  const t = themeTone(theme, tone);
   const p = clamp01(progress);
   const rows = [...lines].sort((a, b) => a.y - b.y);
   const n = rows.length;
@@ -238,10 +241,11 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({
   dockTilt = 12,
   paper = '#E9F0FF',
 }) => {
+  const theme = useTheme();
   const url = /^(https?:|data:|blob:)/.test(src) ? src : staticFile(src);
   // Before it enters, keep the image loaded and decoded so the first frame of its arrival is never late in the live Player.
   if (enter <= 0.001) return <Img src={url} style={{position: 'absolute', left: 0, top: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none'}} />;
-  const t = toneOf(tone);
+  const t = themeTone(theme, tone);
 
   /* ---- where the frame rests: presented rect -> docked rect ---- */
   const q = dockRect ? motion.glide(seg(dock, 0.1, 1)) : 0;

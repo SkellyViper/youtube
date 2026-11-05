@@ -10,6 +10,7 @@ import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {MountOffsetContext, TimelineContext} from '../../../engine/context';
 import {cyber} from '../../../styles/cyber';
+import {ThemeContext} from '../../../styles/ThemeContext';
 import type {Rig} from './rig';
 
 export type BloomSettings = {
@@ -48,6 +49,8 @@ export const Stage3D: React.FC<{
   const {width, height} = useVideoConfig();
   const timeline = useContext(TimelineContext);
   const offset = useContext(MountOffsetContext);
+  // R3F renders into its own reconciler: contexts must be bridged explicitly.
+  const theme = useContext(ThemeContext);
 
   return (
     <ThreeCanvas
@@ -61,11 +64,13 @@ export const Stage3D: React.FC<{
     >
       <TimelineContext.Provider value={timeline}>
         <MountOffsetContext.Provider value={offset}>
+         <ThemeContext.Provider value={theme}>
           <RigCamera rig={rig} />
           <color attach="background" args={[background]} />
           {fog > 0 ? <fogExp2 attach="fog" args={[fogColor, fog]} /> : null}
           <PostFX bloom={bloom} exposure={exposure} />
           {children}
+         </ThemeContext.Provider>
         </MountOffsetContext.Provider>
       </TimelineContext.Provider>
     </ThreeCanvas>
