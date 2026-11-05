@@ -1,6 +1,8 @@
 import React from 'react';
 import * as THREE from 'three';
 import {cyber} from '../../../styles/cyber';
+import {useTheme} from '../../../styles/ThemeContext';
+import {agentPalette} from '../../../styles/themes';
 import {getHaloTexture, hdrMix} from './materials';
 import type {Vec3} from './rig';
 
@@ -61,8 +63,10 @@ export const AgentCore3D: React.FC<{
   readonly halo?: boolean;
   readonly seed?: number;
 }> = ({position = [0, 0, 0], scale = 1, open = 1, energy = 1, spin = 0, threat = 0, calm = 0, facing = 0, lite = false, halo = true, seed = 0}) => {
+  const theme = useTheme();
   if (open <= 0.001) return null;
-  const {color: c, emissive} = cyber;
+  const {emissive} = cyber;
+  const c = agentPalette(theme);
   const base = threat > 0 ? c.red : c.purple;
   const mid = calm > 0 && threat <= 0 ? c.blue : c.purple;
   const blend = threat > 0 ? threat : 0;

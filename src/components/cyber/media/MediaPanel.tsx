@@ -2,7 +2,9 @@ import {Video} from '@remotion/media';
 import React from 'react';
 import {Freeze, Img, staticFile, useVideoConfig} from 'remotion';
 import {beatClock, useEpisodeFrame, useTimeline} from '../../../engine';
-import {alpha, cyber, motion, tone as toneOf, type Tone} from '../../../styles/cyber';
+import {alpha, cyber, motion, type Tone} from '../../../styles/cyber';
+import {useTheme} from '../../../styles/ThemeContext';
+import {themeTone} from '../../../styles/themes';
 import {CyberFrame} from '../frame/CyberFrame';
 import {fitMedia, frameFor, reframe, type Rect} from '../frame/fit';
 
@@ -169,8 +171,9 @@ export const MediaPanel: React.FC<MediaPanelProps> = ({
   opacity = 1,
   overlay,
 }) => {
+  const theme = useTheme();
   const {fps, width: compWidth, height: compHeight} = useVideoConfig();
-  const t = toneOf(tone);
+  const t = themeTone(theme, tone);
   const frame = rect ?? frameFor(aspect, bounds ?? {x: cyber.safe.x, y: cyber.safe.y, width: compWidth - cyber.safe.x * 2, height: compHeight - cyber.safe.y * 2}, align);
   const {x, y, width, height} = frame;
 
