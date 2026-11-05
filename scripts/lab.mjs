@@ -21,7 +21,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler';
-import {ensureBrowser, getCompositions, openBrowser, renderMedia, renderStill} from '@remotion/renderer';
+import {getCompositions, openBrowser, renderMedia, renderStill} from '@remotion/renderer';
+import {browserExecutable, defaultGl, ensureBrowser} from './browser.mjs';
 import {verifyVideo} from './verify-video.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,7 +33,7 @@ const flag = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[
 const has = (name) => args.includes(`--${name}`);
 
 const SLUGS = ['01-hero', '02-agent', '03-swarm', '04-network', '05-scan', '06-cloud', '07-source', '08-media', '09-diagram', '10-ending'];
-const chromiumOptions = {gl: flag('gl') ?? 'angle'};
+const chromiumOptions = {gl: flag('gl') ?? defaultGl};
 const outRoot = path.join(root, 'out', 'style-lab');
 
 const resolveSlugs = () => {
@@ -83,7 +84,7 @@ registerRoot(Root);
 };
 
 const loadCompositions = async (serveUrl, puppeteerInstance) => {
-  const comps = await getCompositions(serveUrl, {puppeteerInstance, chromiumOptions});
+  const comps = await getCompositions(serveUrl, {puppeteerInstance, chromiumOptions, browserExecutable});
   return new Map(comps.filter((c) => c.id.startsWith('lab-')).map((c) => [c.id.slice(4), c]));
 };
 
@@ -118,7 +119,7 @@ const commands = {
     const slugs = resolveSlugs();
     await ensureBrowser();
     const serveUrl = await makeBundle(slugs);
-    const browser = await openBrowser('chrome', {chromiumOptions});
+    const browser = await openBrowser('chrome', {chromiumOptions, browserExecutable});
     const comps = await loadCompositions(serveUrl, browser);
     const scale = Number(flag('scale') ?? 0.5);
     const png = has('png');
@@ -156,6 +157,7 @@ const commands = {
           scale,
           puppeteerInstance: browser,
           chromiumOptions,
+          browserExecutable,
           overwrite: true,
         });
         console.log(`[still] ${path.relative(root, output)}`);
@@ -168,7 +170,7 @@ const commands = {
     const slugs = resolveSlugs();
     await ensureBrowser();
     const serveUrl = await makeBundle(SLUGS);
-    const browser = await openBrowser('chrome', {chromiumOptions});
+    const browser = await openBrowser('chrome', {chromiumOptions, browserExecutable});
     const comps = await loadCompositions(serveUrl, browser);
     const outDir = path.join(root, 'public', 'lab', 'thumbs');
     fs.mkdirSync(outDir, {recursive: true});
@@ -185,6 +187,7 @@ const commands = {
         scale: 0.5,
         puppeteerInstance: browser,
         chromiumOptions,
+        browserExecutable,
         overwrite: true,
       });
       console.log(`[thumb] ${path.relative(root, output)} (frame ${comp.defaultProps.lab.posterFrame})`);
@@ -218,6 +221,7 @@ const commands = {
         x264Preset: 'slow',
         concurrency,
         chromiumOptions,
+        browserExecutable,
         overwrite: true,
         onProgress: ({progress, renderedFrames}) => {
           const now = Date.now();

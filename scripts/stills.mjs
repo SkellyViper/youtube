@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler';
-import {ensureBrowser, openBrowser, renderStill, selectComposition} from '@remotion/renderer';
+import {openBrowser, renderStill, selectComposition} from '@remotion/renderer';
+import {browserExecutable, defaultGl, ensureBrowser} from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -16,7 +17,7 @@ fs.mkdirSync(outDir, {recursive: true});
 
 await ensureBrowser();
 const serveUrl = await bundle({entryPoint: path.join(root, 'src/remotion/index.ts'), publicDir: path.join(root, 'public')});
-const puppeteerInstance = await openBrowser('chrome');
+const puppeteerInstance = await openBrowser('chrome', {browserExecutable, chromiumOptions: {gl: defaultGl}});
 const composition = await selectComposition({serveUrl, id, puppeteerInstance});
 
 const every = Number(flag('every') ?? 1);
