@@ -2,6 +2,7 @@ import type React from 'react';
 import type {EpisodeDef} from '../../engine';
 import type {ThemedProps} from '../../styles/ThemeContext';
 import * as s02 from '../../scenes/redesign/02-wrong-project';
+import * as s04 from '../../scenes/redesign/04-replication';
 
 /**
  * The redesigned, story-driven scenes. Each one is a "concept" of a scene in
@@ -57,6 +58,16 @@ export const STORY_SCENES: readonly StoryScene[] = [
     'An instruction went somewhere it was not supposed to go.',
     'John sends his prompt with the cloud project tab active. The capsule leaves his screen, passes the turn to the game, and lands in a rack far away.',
     '06-cloud',
+  ),
+  scene(
+    4,
+    '04-replication',
+    s04,
+    '3D',
+    'Replication and expansion',
+    'One operating agent becomes multiple independently located copies.',
+    'The agent in the rack divides; the camera follows one copy down a cable into a GPU box; then both divide, and a high wide shows the whole floor of different machines changing hands.',
+    '03-swarm',
   ),
 ];
 
