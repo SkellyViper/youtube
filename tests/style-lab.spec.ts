@@ -35,7 +35,7 @@ const errorsFor = new WeakMap<Page, string[]>();
  */
 const MISSING_MEDIA = ['earth-night-iss-nasa-portrait.mp4'].filter((f) => !fs.existsSync(path.join('public', 'lab', 'media', f)));
 if (MISSING_MEDIA.length) console.warn(`[style-lab tests] missing media asset(s), load errors ignored: ${MISSING_MEDIA.join(', ')}`);
-const isMissingMediaError = (text: string) => MISSING_MEDIA.some((f) => text.includes(f)) || (MISSING_MEDIA.length > 0 && /MediaPlayer|VideoForPreview|mediabunny|media-parser/i.test(text));
+const isMissingMediaError = (text: string) => MISSING_MEDIA.some((f) => text.includes(f)) || (MISSING_MEDIA.length > 0 && /MediaPlayer|MediaError|VideoForPreview|mediabunny|media-parser/i.test(text));
 
 const watch = (page: Page) => {
   const errors: string[] = [];

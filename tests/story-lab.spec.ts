@@ -87,22 +87,22 @@ test.describe('gallery', () => {
 
   test('opens a scene; the URL carries concept, theme and compare', async ({page}) => {
     await page.goto('/style-lab');
-    // A 2D scene with a legacy counterpart keeps this interaction test fast on software GL.
-    await page.getByTestId('story-tile-08-kill-switch').click();
-    await expect(page).toHaveURL(/\/style-lab\/08-kill-switch/);
+    // A 2D scene whose legacy counterpart is also 2D keeps this interaction test fast on software GL.
+    await page.getByTestId('story-tile-06-source').click();
+    await expect(page).toHaveURL(/\/style-lab\/06-source/);
     await ready(page);
-    expect((await presenter(page)).episode).toBe('story-08-kill-switch');
+    expect((await presenter(page)).episode).toBe('story-06-source');
     await click(page, 'story-theme-infrared');
     await expect(page).toHaveURL(/theme=infrared/);
     await click(page, 'story-concept-original');
     await expect(page).toHaveURL(/concept=original/);
-    await page.waitForFunction(() => (window as unknown as PresenterWindow).__presenter?.episode === 'lab-06-cloud');
+    await page.waitForFunction(() => (window as unknown as PresenterWindow).__presenter?.episode === 'lab-07-source');
     await click(page, 'story-concept-redesign');
-    await page.waitForFunction(() => (window as unknown as PresenterWindow).__presenter?.episode === 'story-08-kill-switch');
+    await page.waitForFunction(() => (window as unknown as PresenterWindow).__presenter?.episode === 'story-06-source');
     await click(page, 'story-compare-concept');
     await expect(page).toHaveURL(/compare=concept/);
     await expect(page.getByTestId('story-follower')).toBeVisible();
-    await expect(page.getByTestId('story-cmd')).toContainText('npm run story:render -- 08-kill-switch --theme=infrared');
+    await expect(page.getByTestId('story-cmd')).toContainText('npm run story:render -- 06-source --theme=infrared');
   });
 
   test('reloading a URL restores the selection', async ({page}) => {
