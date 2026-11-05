@@ -95,7 +95,7 @@ const commands = {
     const concept = flag('concept') ?? 'redesign';
     if (concept === 'original') {
       // Delegate to the legacy tooling: the original concept is a legacy sample.
-      const map = {'02-wrong-project': '06-cloud', '04-replication': '03-swarm', '06-source': '07-source', '07-undetected': '05-scan', '09-media-insert': '08-media', '10-callback': '10-ending'};
+      const map = {'04-replication': '03-swarm', '06-source': '07-source', '07-undetected': '05-scan', '08-kill-switch': '06-cloud', '09-media-insert': '08-media', '10-callback': '10-ending'};
       const legacy = slugs.map((s) => map[s]).filter(Boolean);
       if (!legacy.length) throw new Error('None of these scenes has an original prototype.');
       execFileSync('node', [path.join(root, 'scripts/lab.mjs'), 'render', ...legacy], {stdio: 'inherit'});

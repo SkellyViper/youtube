@@ -33,6 +33,20 @@ else if (flag('every')) {
     frames.push({f: b.animEnd, tag: `c${i + 1}`});
   });
 }
+// --thumb: one poster (the last hold frame) at 960x540 into public/lab/thumbs/story-<slug>.jpg, then exit.
+if (process.argv.includes('--thumb')) {
+  const f = Math.max(0, tl.checkpoints[tl.checkpoints.length - 1]);
+  await page.evaluate((fr) => window.__presenter.seek(fr), f);
+  await page.waitForFunction((fr) => window.__presenter.frame === fr, f);
+  await page.waitForTimeout(2200);
+  const tmp = path.join(out, 'thumb.png');
+  await page.screenshot({path: tmp});
+  const dest = path.join('/home/user/youtube/public/lab/thumbs', `story-${slug}.jpg`);
+  execFileSync('convert', [tmp, '-resize', '960x540', '-quality', '86', dest]);
+  console.log(`thumb: ${dest}`);
+  await browser.close();
+  process.exit(0);
+}
 const files = [];
 for (const {f, tag} of frames) {
   await page.evaluate((fr) => window.__presenter.seek(fr), f);

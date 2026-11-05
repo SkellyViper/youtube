@@ -93,21 +93,24 @@ const pixels = (rows: readonly string[]) => {
   });
   return d;
 };
-const BEETLE_BODY = pixels(['....x.x....', '...xxxxx...', '..xxxxxxx..', '..xxxxxxx..', '..xxxxxxx..', '...xxxxx...', '....xxx....']);
-const BEETLE_EYES = pixels(['...........', '...x...x...']);
+const BEETLE_BODY = pixels(['.x.....x.', '..x...x..', '...xxx...', '..xxxxx..', '.xxxxxxx.', '.xxxxxxx.', '.xxxxxxx.', '..xxxxx..', '...xxx...']);
+const BEETLE_EYES = pixels(['.........', '.........', '...x.x...']);
 const BEETLE_LEGS = [
-  pixels(['x.........x', '.x.......x.', '...........', 'xx.......xx', '...........', '.x.......x.', 'x.........x']),
-  pixels(['...........', 'xx.......xx', '...........', '.x.......x.', 'x.........x', '.x.......x.', '...........']),
+  pixels(['.........', '.........', 'x.......x', '.x.....x.', 'x.......x', '.........', '.x.....x.', 'x.......x', '.........']),
+  pixels(['.........', '.........', '.........', 'xx.....xx', '.........', 'xx.....xx', '.........', '.x.....x.', 'x.......x']),
 ];
 
 const Beetle: React.FC<{readonly x: number; readonly y: number; readonly px: number; readonly pose: number; readonly awake: number}> = ({x, y, px, pose, awake}) => {
   const th = useTheme();
   const t = th.tone.threat;
   return (
-    <g transform={`translate(${f2(x - 5.5 * px)} ${f2(y - 3.5 * px)}) scale(${f2(px)})`} shapeRendering="crispEdges">
-      <path d={BEETLE_BODY} fill={alpha(t.deep, 0.95)} />
-      <path d={BEETLE_LEGS[pose]} fill={alpha(t.deep, 0.95)} />
-      <path d={BEETLE_EYES} fill={t.base} opacity={0.35 + 0.65 * awake} />
+    <g transform={`translate(${f2(x - 4.5 * px)} ${f2(y - 4.5 * px)}) scale(${f2(px)})`} shapeRendering="crispEdges">
+      {/* In shadow until the camera arrives: a darker shape on the dark window, then the threat tone comes up. */}
+      <path d={BEETLE_BODY} fill={th.color.void} />
+      <path d={BEETLE_LEGS[pose]} fill={th.color.void} />
+      <path d={BEETLE_BODY} fill={t.deep} opacity={lerp(0.3, 0.9, awake)} />
+      <path d={BEETLE_LEGS[pose]} fill={t.deep} opacity={lerp(0.3, 0.9, awake)} />
+      <path d={BEETLE_EYES} fill={t.base} opacity={0.2 + 0.8 * awake} />
     </g>
   );
 };
@@ -189,7 +192,7 @@ const Scheduler: React.FC<{readonly c: Comp; readonly time: number; readonly awa
   const win = {x: -65, y: -5, w: 130, h: 90};
   return (
     <g transform={`translate(${f2(c.x)} ${f2(c.y)})`}>
-      {heat > 0.001 ? <rect x={-c.w / 2 - 30} y={-c.h / 2 - 30} width={c.w + 60} height={c.h + 60} rx={th.radius + 12} fill={alpha(th.tone.threat.base, 0.08 * heat * th.glow)} /> : null}
+      {heat > 0.001 ? <rect x={-c.w / 2 - 30} y={-c.h / 2 - 30} width={c.w + 60} height={c.h + 60} rx={th.radius + 12} fill={alpha(th.tone.threat.base, 0.05 * heat * th.glow)} /> : null}
       <rect x={-c.w / 2} y={-c.h / 2} width={c.w} height={c.h} rx={th.radius} fill={k.slate} stroke={alpha(k.steel, 0.95)} strokeWidth={2.5} />
       {/* clock: a scheduler */}
       <circle cx={-c.w / 2 + 34} cy={-c.h / 2 + 34} r={16} fill={k.abyss} stroke={alpha(k.steel, 0.9)} strokeWidth={2} />
@@ -197,12 +200,12 @@ const Scheduler: React.FC<{readonly c: Comp; readonly time: number; readonly awa
       <Led x={c.w / 2 - 26} y={-c.h / 2 + 12} seed={41} time={time} />
       <Led x={c.w / 2 - 44} y={-c.h / 2 + 12} seed={43} time={time} />
       {/* the window into it */}
-      <rect x={win.x} y={win.y} width={win.w} height={win.h} rx={4} fill={k.void} stroke={alpha(k.steel, 0.7)} strokeWidth={2} />
-      <Beetle x={win.x + win.w / 2 + jitter * 3} y={win.y + win.h / 2 + 6 - jitter * 2} px={8} pose={pose} awake={awake} />
+      <rect x={win.x} y={win.y} width={win.w} height={win.h} rx={4} fill={alpha(k.abyss, 0.9)} stroke={alpha(k.steel, 0.7)} strokeWidth={2} />
+      <Beetle x={win.x + win.w / 2 + jitter * 3} y={win.y + win.h / 2 + 6 - jitter * 2} px={7} pose={pose} awake={awake} />
       {crack > 0.001 ? (
         <>
-          <Trace curve={CRACK} to={crack} color={th.tone.threat.base} width={2.5} halo={10} cap="butt" />
-          <Trace curve={CRACK} to={crack} color={th.tone.threat.hot} width={1} cap="butt" opacity={0.8} />
+          <Trace curve={CRACK} to={crack} color={th.tone.threat.base} width={1.6} halo={7} cap="butt" />
+          <Trace curve={CRACK} to={crack} color={th.tone.threat.hot} width={0.7} cap="butt" opacity={0.7} />
         </>
       ) : null}
     </g>
@@ -215,7 +218,7 @@ const CAM_TRACK = [
   {beat: 'tp-pass', to: {x: 60, y: 0, zoom: 1.05}, from: 0, until: 1.2, easing: ease.camera},
   {beat: 'tp-pass', to: {x: 160, y: 5, zoom: 0.95}, from: 1.5, until: 2.2, easing: ease.camera},
   {beat: 'tp-open', to: {x: 300, y: 10, zoom: 0.85}, from: 0, until: 1.8, easing: ease.camera},
-  {beat: 'tp-bug', to: {x: 880, y: 230, zoom: 2.2}, from: 0.1, until: 2.1, easing: ease.camera},
+  {beat: 'tp-bug', to: {x: 920, y: 280, zoom: 2.3}, from: 0.1, until: 2.1, easing: ease.camera},
 ];
 
 export const TestsPassScene: React.FC = () => {
@@ -270,7 +273,7 @@ export const TestsPassScene: React.FC = () => {
       <Canvas>
         <World cam={cam}>
           {/* The system behind the panel: in shadow until the door opens. */}
-          <g opacity={lerp(0.3, 1, reveal)}>
+          <g opacity={lerp(0.18, 1, reveal)}>
             {WIRES.map((w, i) => (
               <path key={i} d={w.d} fill="none" stroke={alpha(k.steel, 0.9)} strokeWidth={5} strokeLinecap="round" />
             ))}

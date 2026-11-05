@@ -73,7 +73,7 @@ const RIG_TRACK = [
  */
 const CRANE_LEAD = 0.5; // seconds before the end of ud-scan at which the lift begins
 const CRANE_SETTLE = 1.1; // seconds into ud-hold at which it is finally still
-const HIGH: Rig = {position: [2.4, 23.5, 19.0], target: [0, 0, -8.8], fov: 40};
+const HIGH: Rig = {position: [2.4, 21.5, 18.5], target: [0, 0, -8.4], fov: 40};
 
 /** Seconds the sheet takes to cross the zone (progress 0 -> 1). */
 const SWEEP_SECONDS = 2.3;
@@ -135,7 +135,7 @@ export const UndetectedScene: React.FC = () => {
   const progress = b['ud-scan'].at(0.25, 0.25 + SWEEP_SECONDS, ease.linear);
   const retire = b['ud-scan'].at(2.6, 3.0, ease.in);
   const clean = b['ud-scan'].at(2.3, 2.9, ease.out); // the zone line settles to "clean"
-  const zoneLevel = lerp(0.85, 1.7 * th.glow, clean) * (0.3 + 0.7 * drawZone);
+  const zoneLevel = lerp(0.85, 1.35 * th.glow, clean) * (0.3 + 0.7 * drawZone);
   const sinceOf = (m: MachineSpec) => scanSince(SCAN, progress, [m.x, 0, m.z], SWEEP_SECONDS);
 
   // ---- beat 3: the campus, and the agent -------------------------------------
@@ -195,11 +195,11 @@ export const UndetectedScene: React.FC = () => {
           )),
         )}
         {ZONE_CORNERS.map((c, i) => (
-          <CornerPost key={i} position={c} cap={hdr(safe.base, zoneLevel * (0.4 + 0.6 * seg(drawZone, i * 0.25, i * 0.25 + 0.2)))} color={th.color.slate} />
+          <CornerPost key={i} position={c} cap={hdr(safe.base, zoneLevel * 0.8 * (0.4 + 0.6 * seg(drawZone, i * 0.25, i * 0.25 + 0.2)))} color={th.color.slate} />
         ))}
 
         {/* The scan sheet, draped over whatever it is crossing. */}
-        <ScanField field={SCAN} progress={progress} appear={appear} retire={retire} color={safe.base} hot={safe.hot} gain={1.6 * th.glow} edge={3.4 * th.glow} edgeRadius={0.018} obstacles={SCAN_OBSTACLES} />
+        <ScanField field={SCAN} progress={progress} appear={appear} retire={retire} color={safe.base} hot={safe.hot} gain={1.3 * th.glow} edge={3.2 * th.glow} edgeRadius={0.018} obstacles={SCAN_OBSTACLES} />
 
         {/* A tick over each machine the sheet has passed. */}
         {ZONE_MACHINES.map((m) => {
