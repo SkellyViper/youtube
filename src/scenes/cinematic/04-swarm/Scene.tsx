@@ -180,8 +180,8 @@ export const Scene: React.FC = () => {
         ) : null}
         {/* The agent's light on the aisle in front of the taken racks */}
         <pointLight position={[IRIS_ORIGIN[0], IRIS_ORIGIN[1] + 0.1, IRIS_ORIGIN[2] - 0.35]} intensity={3 + 7 * flare} color={mind} distance={5} decay={2} />
-        {landed > 0.001 ? <pointLight position={[IRIS_NEXT[0], IRIS_NEXT[1] + 0.1, IRIS_NEXT[2] - 0.35]} intensity={7 * landed} color={mind} distance={5} decay={2} /> : null}
-        {travelling ? <pointLight position={pulse} intensity={3} color={mind} distance={4} decay={2} /> : null}
+        <pointLight position={[IRIS_NEXT[0], IRIS_NEXT[1] + 0.1, IRIS_NEXT[2] - 0.35]} intensity={(landed > 0.001) ? (7 * landed) : 0} color={mind} distance={5} decay={2} />
+        <pointLight position={pulse} intensity={(travelling) ? (3) : 0} color={mind} distance={4} decay={2} />
         <Takeover levelOf={levelOf} color={mind} glow={glow} />
 
         {/* Conduits: always there, faintly lit steel */}
@@ -216,7 +216,7 @@ export const Scene: React.FC = () => {
           <EdgePulse key={`fp${k}`} curve={f.curve} u={seg(S, f.depart, f.arrive)} wake={1 - seg(S, f.arrive, f.arrive + 2.0)} radius={0.12} head={0.25} color={mind} white={th.color.white} glow={glow} />
         ))}
         {/* Light from the hall below spills upward once the roof is gone (what the camera above sees of the purple hall) */}
-        {reveal > 0.01 ? <pointLight position={[0, 6, 0]} intensity={40 * reveal * clamp01(SP.infectionAt(2, 5, S) + 0.3)} color={mind} distance={30} decay={2} /> : null}
+        <pointLight position={[0, 6, 0]} intensity={(reveal > 0.01) ? (40 * reveal * clamp01(SP.infectionAt(2, 5, S) + 0.3)) : 0} color={mind} distance={30} decay={2} />
       </Stage3D>
     </AbsoluteFill>
   );

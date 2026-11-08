@@ -37,7 +37,7 @@ export const WorldLayer: React.FC = () => {
           {/* The iris's own light on the inside of the open bay (centimetres away, so a small intensity), stronger as the camera closes in. */}
           <pointLight position={[BAY[0], BAY[1] + 0.04, BAY[2] - 0.1]} intensity={0.9 + 2.2 * glow} color={th.tone.mind.base} distance={1.8} decay={2} />
           {/* The document's light: a flash in the bay as the page leaves the machine, and as it comes back. */}
-          {flare > 0.001 ? <pointLight position={[BAY[0], BAY[1], BAY[2] - 0.18]} intensity={20 * flare} color={th.tone.system.hot} distance={4} decay={2} /> : null}
+          <pointLight position={[BAY[0], BAY[1], BAY[2] - 0.18]} intensity={(flare > 0.001) ? (20 * flare) : 0} color={th.tone.system.hot} distance={4} decay={2} />
         </DataHall>
       </Stage3D>
     </AbsoluteFill>

@@ -81,6 +81,7 @@ URL options:
 - `#c=5`: deep link to checkpoint 5. The hash updates as you present, so reloading resumes where you were.
 - `?episode=NotDetected`: choose an episode from `src/videos/registry.ts`.
 - `?fps=30`: preview the 30 fps timing.
+- `?quality=full|low`: rendering quality of the 3D stages in the live Player (default `auto`: 0.66 internal resolution, 2x MSAA, 1024 shadows). Exports always render at full quality. On a laptop with two GPUs, also make sure the browser runs on the discrete one (Windows: Settings → System → Display → Graphics → add the browser → High performance; check `chrome://gpu`).
 - `/style-lab`: the Style Lab gallery. `/style-lab/03-swarm` opens one sample in the presenter (same keys, plus `[` / `]` for the previous / next sample and `Esc` or `G` for the gallery).
 - `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial`: a scene with its concept, theme and comparison (`O`, `T`, `C` keys). Concepts are `original` (legacy sample), `redesign` (2D story scene) and `cinematic` (3D reenactment); `compare=concept:cinematic` puts another treatment beside it.
 - `/style-lab/cine-02-wrong-project`: a cinematic experiment opens as the Cinematic concept of its scene family.

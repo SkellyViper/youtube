@@ -64,6 +64,24 @@ The camera pushes into the open bay; the hall desaturates; a small evidence fram
 5. **Physical tells for the agent** (all). The open bay, busy LEDs, the purple spill and the console gave the iris a place; it stopped being a hologram.
 6. **Evidence that rises from the scene** (X06). Readable sources without leaving the world.
 
+## Live-Player performance
+
+Measured with `node scripts/perf.mjs <url>` (frames actually displayed per beat, exact stops). This laptop has an RTX 4090 and an Intel UHD; Chrome and Chromium both ran WebGL on the **Intel UHD** (`chrome://gpu`), so these are integrated-GPU numbers.
+
+| Scene / beat | Before | After |
+| --- | --- | --- |
+| X01 (room), four beats | 26–31 % of frames shown | 63–71 % |
+| X02 wp-tab / wp-travel | 25 % / 28 % | 40 % / 51 % |
+| X02 wp-send / wp-arrive | 9 % / 9 % | 39 % / 42 % |
+| X04, four beats | not measured | 48–67 % |
+
+Two causes, two fixes:
+
+1. **Fill rate.** The Player rendered the 3D stage at full 1920×1080 with 4× MSAA, full-resolution bloom and 2048 px shadow maps. `Stage3D` now has a Player-only quality mode (`useStageQuality`): default `auto` renders at 0.66 scale, 2× MSAA, 1024 shadows; `?quality=low` at 0.5 / none / 512; `?quality=full` and every export are unchanged. Timing and determinism do not depend on it.
+2. **Shader recompiles.** Lights that mounted or unmounted mid-beat (the pulse's light, the agent's light, the room unmounting with its three lights, scene-level flashes) changed the light count, and three.js recompiles every material when that happens: a stall of several hundred milliseconds inside a 2.6 s beat. All lights now stay mounted at intensity 0 when off (`Spot`, `LightPool`, and thirteen sites across the scenes), and the room stays mounted in X02 and X03. Street lamps and facade spots are switched off in X01, which never leaves the room.
+
+On the discrete GPU the scenes should hold 60 fps at `auto`. Every checkpoint stop stayed exact in every measurement.
+
 ## What did not work or is still weak
 
 - **The district is schematic.** Blocks with lit windows, lamps and a horizon haze read as "a city at night" from the air but not up close; the facade climb in X02 and the flight in X03 are the darkest seconds of the set. A few more building types and a wet-street sheen would fix it.

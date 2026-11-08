@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {useTheme} from '../../../styles/ThemeContext';
 import type {Vec3} from '../../cyber/three/rig';
 import {Comet3D, GlowTube, curveThrough} from '../../cyber/three/Signal3D';
+import {useStageQuality} from '../../cyber/three/Stage3D';
 
 /**
  * Messages travel along real cables. A cable is a dark conduit that is always
@@ -64,13 +65,15 @@ export const Spot: React.FC<{
   readonly castShadow?: boolean;
   readonly mapSize?: number;
   readonly bias?: number;
-}> = ({position, target, intensity, color = '#ffffff', angle = 0.7, penumbra = 0.5, distance = 12, castShadow = false, mapSize = 1024, bias = -0.0008}) => {
+}> = ({position, target, intensity, color = '#ffffff', angle = 0.7, penumbra = 0.5, distance = 12, castShadow = false, mapSize, bias = -0.0008}) => {
   const obj = useMemo(() => new THREE.Object3D(), []);
+  const quality = useStageQuality();
+  const size = mapSize ?? Math.min(1024, quality.shadow);
   obj.position.set(target[0], target[1], target[2]);
-  if (intensity <= 0.001) return null;
+  // Never unmount: a changing light count recompiles every shader in the scene (a visible stall).
   return (
     <>
-      <spotLight position={[position[0], position[1], position[2]]} target={obj} intensity={intensity} color={color} angle={angle} penumbra={penumbra} distance={distance} decay={2} castShadow={castShadow} shadow-mapSize-width={mapSize} shadow-mapSize-height={mapSize} shadow-bias={bias} />
+      <spotLight position={[position[0], position[1], position[2]]} target={obj} intensity={Math.max(0, intensity)} color={color} angle={angle} penumbra={penumbra} distance={distance} decay={2} castShadow={castShadow} shadow-mapSize-width={size} shadow-mapSize-height={size} shadow-bias={bias} />
       <primitive object={obj} />
     </>
   );
@@ -78,8 +81,8 @@ export const Spot: React.FC<{
 
 /** A soft pool of coloured light on a surface: the spill of a screen or an LED strip. */
 export const LightPool: React.FC<{readonly position: Vec3; readonly color: string; readonly intensity: number; readonly distance?: number}> = ({position, color, intensity, distance = 2.5}) => {
-  if (intensity <= 0.001) return null;
-  return <pointLight position={[position[0], position[1], position[2]]} intensity={intensity} color={color} distance={distance} decay={2} />;
+  // Always mounted (intensity 0 when off), for the same reason as Spot.
+  return <pointLight position={[position[0], position[1], position[2]]} intensity={Math.max(0, intensity)} color={color} distance={distance} decay={2} />;
 };
 
 /** A straight corridor of points for cables along an edge. */

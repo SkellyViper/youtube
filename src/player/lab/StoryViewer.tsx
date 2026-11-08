@@ -54,6 +54,7 @@ export const StoryViewer: React.FC<{readonly family: Family; readonly initialCon
     const q = new URLSearchParams(window.location.search);
     const extra = new URLSearchParams();
     if (q.has('hud')) extra.set('hud', '');
+    if (q.get('quality')) extra.set('quality', q.get('quality')!);
     window.history.replaceState(null, '', `${window.location.pathname}${writeSelection(sel, initialConcept, extra)}${window.location.hash}`);
   }, [sel, initialConcept]);
 

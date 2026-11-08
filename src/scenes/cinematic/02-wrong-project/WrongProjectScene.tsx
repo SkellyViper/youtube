@@ -87,7 +87,6 @@ export const WrongProjectScene: React.FC = () => {
   else if (routeT >= 1) pulse.set(HERO_BAY[0], HERO_BAY[1], HERO_BAY[2]);
 
   // ---- camera: keyed for the room beats, then a travelling shot that follows the pulse --------
-  const travel = b['wp-travel'].at(0, 3.6, ease.inOut);
   const arrive = b['wp-arrive'].at(0, 2.4, ease.inOut);
   const follow = smooth(seg(b['wp-travel'].time, 0.7, 1.9)); // once at the window, the camera lets go of the room and takes the pulse's side
   // Follow offset: an aerial trailing view over the street (the district and the lit building stay in frame),
@@ -142,7 +141,7 @@ export const WrongProjectScene: React.FC = () => {
     return hero ? {power: 1, activity: 0.25 + 0.75 * ignite, agent: ignite, open: ignite} : {power: 1, activity: 0.15 + 0.15 * ((row * 7 + i * 3) % 5) / 5};
   };
   const cables = useMemo<readonly Vec3[]>(() => [[GAME_MONITOR.position[0], GAME_MONITOR.position[1] - 0.15, GAME_MONITOR.position[2] - 0.05], [CHAT_MONITOR.position[0], CHAT_MONITOR.position[1] - 0.25, CHAT_MONITOR.position[2] - 0.05]], []);
-  const showRoom = travel < 0.999 || arrive < 0.01;
+  const showRoom = true; // the room stays mounted: unmounting its lights would recompile every shader mid-beat
   const fog = lerp(0.009, 0.02, inside);
 
   return (
@@ -169,13 +168,13 @@ export const WrongProjectScene: React.FC = () => {
         <group position={[HALL_TO_WORLD.position[0], HALL_TO_WORLD.position[1], HALL_TO_WORLD.position[2]]} rotation={[0, HALL_TO_WORLD.yaw, 0]}>
           <DataHall stateOf={stateOf} hero={HERO_RACK} time={time} lights={0.9} room={1.8} ceiling={1 - inside} />
           {/* The agent's light on the aisle floor when it lands */}
-          {ignite > 0.001 ? <pointLight position={[heroBayLocal()[0], 1.1, heroBayLocal()[2] - 0.5]} intensity={9 * ignite} color={th.tone.mind.base} distance={6} decay={2} /> : null}
+          <pointLight position={[heroBayLocal()[0], 1.1, heroBayLocal()[2] - 0.5]} intensity={(ignite > 0.001) ? (9 * ignite) : 0} color={th.tone.mind.base} distance={6} decay={2} />
         </group>
         {/* The route: a faint conduit the whole way, lit behind the pulse, and the pulse itself */}
         <GlowTube curve={ROUTE.curve} radius={0.03} color={th.color.steel} intensity={0.5} segments={400} radial={5} />
         {routeT > 0 && routeT < 0.999 ? <GlowTube curve={ROUTE.curve} radius={0.028} color={th.tone.mind.base} intensity={1.3 * th.glow} from={Math.max(0, routeT - 0.08)} to={Math.min(1, routeT)} segments={400} radial={5} /> : null}
         {routeT > 0 && routeT < 1 ? <Comet3D curve={ROUTE.curve} t={routeT / 1.04} tail={0.04} color={th.tone.mind.base} radius={0.05} intensity={3.2 * th.glow} head={2.2} /> : null}
-        {routeT > 0 && routeT < 1 ? <pointLight position={pulse} intensity={6} color={th.tone.mind.base} distance={6} decay={2} /> : null}
+        <pointLight position={pulse} intensity={(routeT > 0 && routeT < 1) ? (6) : 0} color={th.tone.mind.base} distance={6} decay={2} />
       </Stage3D>
     </AbsoluteFill>
   );

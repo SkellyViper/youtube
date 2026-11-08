@@ -1,7 +1,7 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {ThreeCanvas} from '@remotion/three';
 import React, {useContext, useEffect, useLayoutEffect, useMemo} from 'react';
-import {useCurrentFrame, useVideoConfig} from 'remotion';
+import {useCurrentFrame, useRemotionEnvironment, useVideoConfig} from 'remotion';
 import * as THREE from 'three';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
@@ -17,6 +17,33 @@ export type BloomSettings = {
   readonly strength?: number;
   readonly radius?: number;
   readonly threshold?: number;
+};
+
+/**
+ * Rendering quality of the live Player. Exports always render at full
+ * quality; the Player (a preview, scaled to the window anyway) can trade
+ * internal resolution, MSAA and shadow-map size for frame rate.
+ *
+ *   ?quality=full   1.0 scale, 4x MSAA, 2048 shadows (what the export does)
+ *   ?quality=low    0.5 scale, no MSAA, 512 shadows
+ *   default (auto)  0.66 scale, 2x MSAA, 1024 shadows
+ *
+ * Only the pixel density changes: timing, composition and determinism do not.
+ */
+export type StageQuality = {readonly scale: number; readonly samples: number; readonly shadow: number; readonly name: 'full' | 'auto' | 'low'};
+const QUALITY: Record<StageQuality['name'], StageQuality> = {
+  full: {name: 'full', scale: 1, samples: 4, shadow: 2048},
+  auto: {name: 'auto', scale: 0.66, samples: 2, shadow: 1024},
+  low: {name: 'low', scale: 0.5, samples: 0, shadow: 512},
+};
+const readQuality = (): StageQuality => {
+  if (typeof window === 'undefined') return QUALITY.full;
+  const q = new URLSearchParams(window.location.search).get('quality');
+  return q === 'full' || q === 'low' ? QUALITY[q] : QUALITY.auto;
+};
+export const useStageQuality = (): StageQuality => {
+  const {isRendering} = useRemotionEnvironment();
+  return isRendering ? QUALITY.full : readQuality();
 };
 
 /**
@@ -57,12 +84,13 @@ export const Stage3D: React.FC<{
   const offset = useContext(MountOffsetContext);
   // R3F renders into its own reconciler: contexts must be bridged explicitly.
   const theme = useContext(ThemeContext);
+  const quality = useStageQuality();
 
   return (
     <ThreeCanvas
       width={width}
       height={height}
-      dpr={1}
+      dpr={quality.scale}
       frameloop="demand"
       gl={{antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false}}
       shadows={shadows}
@@ -149,19 +177,22 @@ const PostFX: React.FC<{readonly bloom?: BloomSettings | false; readonly exposur
   const camera = useThree((s) => s.camera);
   const width = useThree((s) => s.size.width);
   const height = useThree((s) => s.size.height);
+  const quality = useStageQuality();
 
   const fx = useMemo(() => {
-    const target = new THREE.WebGLRenderTarget(width, height, {type: THREE.HalfFloatType, samples: 4});
+    // Internal resolution follows the stage quality (the canvas is scaled to the window anyway).
+    const pr = quality.scale;
+    const target = new THREE.WebGLRenderTarget(Math.round(width * pr), Math.round(height * pr), {type: THREE.HalfFloatType, samples: quality.samples});
     const composer = new EffectComposer(gl, target);
-    composer.setPixelRatio(1);
+    composer.setPixelRatio(pr);
     composer.setSize(width, height);
     composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1, 1, 1);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.round(width * pr), Math.round(height * pr)), 1, 1, 1);
     composer.addPass(bloomPass);
     composer.addPass(new OutputPass());
     composer.addPass(new ShaderPass(DitherShader));
     return {composer, bloomPass, target};
-  }, [gl, scene, camera, width, height]);
+  }, [gl, scene, camera, width, height, quality.scale, quality.samples]);
 
   useEffect(
     () => () => {

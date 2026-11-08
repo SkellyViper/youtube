@@ -117,7 +117,6 @@ const KEYS: readonly PathKey[] = [
   {p: hallToWorld([-2.5, 1.45, -2.85]), look: hallToWorld([-0.8, 0.95, -1.9]), fov: 39},
 ];
 const K_WINDOW = 3;
-const K_ROOM_GONE = 6;
 const K_LEAVE_END = 8;
 
 const buildPath = (keys: readonly PathKey[]) => {
@@ -206,7 +205,7 @@ export const StillRunningScene: React.FC = () => {
   const terminal = useScreenTexture(288, 200, (ctx, w, h) => paintTerminal(ctx, w, h, {time, theme: th, progress: logProgress, lines: LOG_LINES, title: 'agent-runner — running'}));
   const heroLight = 6 + 5 * open;
 
-  const showRoom = pathT < PATH.pos.marks[K_ROOM_GONE];
+  const showRoom = true; // the room stays mounted: unmounting its lights would recompile every shader mid-beat
   const fog = lerp(lerp(0.014, 0.009, smooth(pathT / Math.max(1e-6, PATH.pos.marks[K_WINDOW + 1]))), 0.02, inside);
 
   return (

@@ -6,6 +6,7 @@ import {useTheme} from '../../../styles/ThemeContext';
 import type {Vec3} from '../../cyber/three/rig';
 import {OUTSIDE, ROOM} from '../world';
 import {SkyDome} from '../../cyber/three/Environment';
+import {useStageQuality} from '../../cyber/three/Stage3D';
 import {Spot} from './Signals';
 import {cineMaterials, lit, plankTexture} from './materials';
 
@@ -215,6 +216,7 @@ const WallPiece: React.FC<{readonly x: number; readonly y: number; readonly w: n
  */
 export const WindowLight: React.FC<{readonly intensity?: number; readonly color?: string}> = ({intensity = 1, color}) => {
   const th = useTheme();
+  const quality = useStageQuality();
   const win = ROOM.window;
   const target = useMemo(() => {
     const t = new THREE.Object3D();
@@ -230,8 +232,8 @@ export const WindowLight: React.FC<{readonly intensity?: number; readonly color?
         intensity={1.1 * intensity}
         color={color ?? th.tone.system.base}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={quality.shadow}
+        shadow-mapSize-height={quality.shadow}
         shadow-bias={-0.0006}
         shadow-normalBias={0.02}
         shadow-camera-left={-3}
@@ -252,7 +254,7 @@ export const WindowLight: React.FC<{readonly intensity?: number; readonly color?
  * long low building with a lit entrance, roof plant and a row of status
  * lights. `lights` dims the building's lights (0 = asleep).
  */
-export const Outside: React.FC<{readonly lights?: number; readonly mind?: number; readonly shell?: number}> = ({lights = 1, mind = 0, shell = 1}) => {
+export const Outside: React.FC<{readonly lights?: number; readonly mind?: number; readonly shell?: number; readonly exteriorLights?: boolean}> = ({lights = 1, mind = 0, shell = 1, exteriorLights = true}) => {
   const th = useTheme();
   const m = useMemo(() => cineMaterials(th), [th]);
   const dc = OUTSIDE.dataCenter;
@@ -318,7 +320,7 @@ export const Outside: React.FC<{readonly lights?: number; readonly mind?: number
             <planeGeometry args={[0.5, 0.22]} />
             <meshBasicMaterial color={lit('#FFB86A', 1.4)} side={THREE.DoubleSide} />
           </mesh>
-          <pointLight position={[0.8, 5.9, 0]} intensity={95} color="#FFB070" distance={26} decay={2} />
+          <pointLight position={[0.8, 5.9, 0]} intensity={(exteriorLights) ? (95) : 0} color="#FFB070" distance={26} decay={2} />
         </group>
       ))}
       <directionalLight position={[-30, 25, -90]} intensity={0.35} color="#4A6AC0" />
@@ -365,7 +367,7 @@ export const Outside: React.FC<{readonly lights?: number; readonly mind?: number
               <boxGeometry args={[0.5, 0.2, 0.6]} />
               <meshStandardMaterial color={m.steelDark} roughness={0.7} />
             </mesh>
-            <Spot position={[0, -0.1, 0]} target={[0, -8, -0.3]} intensity={90 * lights} angle={0.75} penumbra={0.5} distance={18} color="#9FB8FF" />
+            {exteriorLights ? <Spot position={[0, -0.1, 0]} target={[0, -8, -0.3]} intensity={90 * lights} angle={0.75} penumbra={0.5} distance={18} color="#9FB8FF" /> : null}
           </group>
         ))}
         {/* A row of status lights along the facade: system blue, one or two turning to the agent's colour */}

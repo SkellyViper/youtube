@@ -305,7 +305,7 @@ export const Scene: React.FC = () => {
           return <CheckLamp key={`${l.row}-${l.i}`} position={l.position} yaw={l.yaw} on={on} flash={flash} />;
         })}
         {/* A faint green on the aisle floor once the zone is cleared: the lamps' light, pooled */}
-        {clear > 0.01 ? <pointLight position={[0, 2.0, AISLE_Z]} intensity={2.2 * clear} color={th.tone.safe.base} distance={7} decay={2} /> : null}
+        <pointLight position={[0, 2.0, AISLE_Z]} intensity={(clear > 0.01) ? (2.2 * clear) : 0} color={th.tone.safe.base} distance={7} decay={2} />
         <Closet position={CLOSET_POS} width={2.2} depth={1.8} height={2.6} doorOpen={1} agent={1} energy={energy} time={time} seed={5} />
         {/* a cold hall light reaching the corridor by the closet, so the door frame reads before the purple does */}
         <pointLight position={[5.6, 3.2, -4.4]} intensity={6} color={th.tone.system.hot} distance={6} decay={2} />

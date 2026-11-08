@@ -118,7 +118,7 @@ export const Monitor: React.FC<{
         <planeGeometry args={[0.006, 0.003]} />
         <meshBasicMaterial color={lit('#EAF2FF', 1.2 * power)} />
       </mesh>
-      {castLight ? <pointLight position={[0, 0, 0.5]} intensity={2.0 * light * power} color={tint} distance={3.2} decay={2} castShadow={false} /> : null}
+      <pointLight position={[0, 0, 0.5]} intensity={(castLight) ? (2.0 * light * power) : 0} color={tint} distance={3.2} decay={2} castShadow={false} />
     </group>
   );
 };

@@ -126,7 +126,7 @@ export const CrashCart: React.FC<{
           <meshStandardMaterial color={m.plasticDark} roughness={0.9} />
         </mesh>
         {/* The screen's light on the worktop and the aisle */}
-        {power > 0.01 && light > 0 ? <pointLight position={[0, screenY - 0.05, screenZ + 0.35]} intensity={1.6 * light * power} color={tint} distance={2.6} decay={2} /> : null}
+        <pointLight position={[0, screenY - 0.05, screenZ + 0.35]} intensity={(power > 0.01 && light > 0) ? (1.6 * light * power) : 0} color={tint} distance={2.6} decay={2} />
       </group>
       {consoleCable ? (
         <mesh geometry={consoleCable} position={[-position[0], -position[1], -position[2]]}>

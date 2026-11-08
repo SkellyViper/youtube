@@ -226,7 +226,7 @@ export const CageSign: React.FC<{readonly position: Vec3; readonly yaw?: number;
         <sphereGeometry args={[0.014, 12, 8]} />
         <meshBasicMaterial color={lamp} />
       </mesh>
-      {c > 0.02 ? <pointLight position={[0.1, 0.06, 0.08]} intensity={0.5 * c} color={th.tone.safe.base} distance={0.9} decay={2} /> : null}
+      <pointLight position={[0.1, 0.06, 0.08]} intensity={(c > 0.02) ? (0.5 * c) : 0} color={th.tone.safe.base} distance={0.9} decay={2} />
     </group>
   );
 };

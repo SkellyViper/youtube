@@ -137,7 +137,7 @@ const Tower: React.FC<{readonly agent: number; readonly energy: number; readonly
         <meshStandardMaterial map={perf} color={m.steelDark} roughness={0.6} metalness={0.5} />
       </mesh>
       {/* The agent's light leaving the bay */}
-      {agent > 0.001 ? <pointLight position={[0, bayY, F + 0.45]} intensity={1.0 * agent * (0.7 + 0.3 * energy)} color={th.tone.mind.base} distance={3.4} decay={2} /> : null}
+      <pointLight position={[0, bayY, F + 0.45]} intensity={(agent > 0.001) ? (1.0 * agent * (0.7 + 0.3 * energy)) : 0} color={th.tone.mind.base} distance={3.4} decay={2} />
     </group>
   );
 };

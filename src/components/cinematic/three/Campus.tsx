@@ -153,7 +153,7 @@ const Building: React.FC<{readonly b: CampusBuilding; readonly taken: number; re
         <boxGeometry args={[4, 0.2, 2.2]} />
         <meshStandardMaterial color={m.steelDark} roughness={0.8} />
       </mesh>
-      {reveal > 0.02 ? <pointLight position={[-w / 2 + 3, 2.3, d / 2 + 1.0]} intensity={26 * reveal} color="#FFC98A" distance={18} decay={2} /> : null}
+      <pointLight position={[-w / 2 + 3, 2.3, d / 2 + 1.0]} intensity={(reveal > 0.02) ? (26 * reveal) : 0} color="#FFC98A" distance={18} decay={2} />
     </group>
   );
 };

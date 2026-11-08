@@ -83,7 +83,7 @@ export const JohnScene: React.FC = () => {
       <Stage3D rig={rig} bloom={{strength: 0.42, radius: 0.6, threshold: 1.0}} fog={0.014} fogColor={th.color.void} background={th.color.void} exposure={1.2} shadows>
         <DevRoom room={1}>
           <WindowLight intensity={1.5} />
-          <Outside lights={1} mind={0} />
+          <Outside lights={1} mind={0} exteriorLights={false} />
           <Desk>
             <Monitor position={GAME_MONITOR.position} width={GAME_MONITOR.width} height={GAME_MONITOR.height} yaw={GAME_MONITOR.yaw} map={game} tint={th.tone.human.base} light={0.85} />
             <Monitor position={CHAT_MONITOR.position} width={CHAT_MONITOR.width} height={CHAT_MONITOR.height} yaw={CHAT_MONITOR.yaw} map={chat} tint={th.tone.mind.base} light={agentLight} />
