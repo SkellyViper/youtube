@@ -97,7 +97,8 @@ test.describe('gallery', () => {
     await expect
       .poll(() => page.evaluate(() => Array.from(document.querySelectorAll<HTMLImageElement>('.lab-thumb img')).filter((img) => img.complete && img.naturalWidth > 0).length))
       .toBe(10);
-    await expect(page.locator('.lab-thumb-missing')).toHaveCount(0);
+    // Scoped to the legacy tiles: the story and cinematic sections have their own posters.
+    await expect(page.locator('.lab-tile .lab-thumb-missing')).toHaveCount(0);
     // The registry behind it: ten samples, each a short multi-beat clip.
     const lab = await page.evaluate(() => (window as unknown as PresenterWindow).__lab);
     expect(lab.map((s) => s.slug)).toEqual(SLUGS);

@@ -43,9 +43,15 @@ export const Stage3D: React.FC<{
   readonly fogColor?: string;
   readonly background?: string;
   readonly exposure?: number;
+  /**
+   * Soft shadow maps (PCF). Off by default: the original samples read by
+   * silhouette and rim light alone. The cinematic scenes turn it on so desks,
+   * people and racks sit on their floors.
+   */
+  readonly shadows?: boolean;
   readonly style?: React.CSSProperties;
   readonly children?: React.ReactNode;
-}> = ({rig, bloom, fog = cyber.fog.density, fogColor = cyber.fog.color, background = cyber.color.void, exposure = 1, style, children}) => {
+}> = ({rig, bloom, fog = cyber.fog.density, fogColor = cyber.fog.color, background = cyber.color.void, exposure = 1, shadows = false, style, children}) => {
   const {width, height} = useVideoConfig();
   const timeline = useContext(TimelineContext);
   const offset = useContext(MountOffsetContext);
@@ -59,6 +65,7 @@ export const Stage3D: React.FC<{
       dpr={1}
       frameloop="demand"
       gl={{antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false}}
+      shadows={shadows}
       camera={{fov: rig.fov, near: cyber.camera.near, far: cyber.camera.far, position: rig.position as [number, number, number]}}
       style={{position: 'absolute', inset: 0, ...style}}
     >

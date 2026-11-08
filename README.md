@@ -13,7 +13,7 @@ Both modes mount the same composition component and read the same timeline. Noth
 
 The included demo is *"Not detected ≠ does not exist"*: 4 scenes, 11 beats, about 38.7 s when exported.
 
-The **Style Lab** (`/style-lab`) holds the channel's visual language in motion: ten story-driven scenes from the first episode, switchable between five visual identities and comparable with the original ten experiments. See [docs/STYLE_LAB_REDESIGN.md](docs/STYLE_LAB_REDESIGN.md) (redesign, themes, gallery, export) and [docs/STYLE_LAB.md](docs/STYLE_LAB.md) (the original experiments).
+The **Style Lab** (`/style-lab`) holds the channel's visual language in motion: six **cinematic 3D experiments** (documentary-style reenactments: a real room, a data hall, cameras that travel), ten story-driven 2D scenes from the first episode, and the original ten experiments, all switchable between five visual identities and comparable beat for beat. See [docs/CINEMATIC_VISUAL_LANGUAGE.md](docs/CINEMATIC_VISUAL_LANGUAGE.md) (the cinematography playbook), [docs/FERN_VISUAL_RESEARCH.md](docs/FERN_VISUAL_RESEARCH.md) (the research behind it), [docs/cinematic/](docs/cinematic/) (critique, builder brief, quality report), [docs/STYLE_LAB_REDESIGN.md](docs/STYLE_LAB_REDESIGN.md) (the 2D redesign, themes, gallery) and [docs/STYLE_LAB.md](docs/STYLE_LAB.md) (the original experiments).
 
 ---
 
@@ -50,6 +50,9 @@ On the first render, Remotion downloads its own headless Chrome automatically. F
 | `npm run story:render -- 04-replication --theme=infrared` | Redesign: render one scene in one theme (`--all-themes`, `all`, `--concept=original`, `--fps=30`). |
 | `npm run story:stills`, `npm run story:thumbs`, `npm run story:sheet` | Redesign: stills, gallery posters, contact sheet. |
 | `npm run story:preview -- 04-replication neon` | Redesign: screenshots from the live Player (no render) with a contact sheet. |
+| `npm run cine:render -- 02-wrong-project --theme=neon` | Cinematic: render one experiment in one theme to `out/cinematic/` (`--all-themes`, `all`, `--fps=30`). |
+| `npm run cine:stills -- 01-john`, `npm run cine:thumbs`, `npm run cine:frames`, `npm run cine:sheet` | Cinematic: stills, gallery posters, key frames from the MP4s, contact sheet. |
+| `npm run cine:preview -- cine-01-john neon` | Cinematic: checkpoint and mid-beat screenshots from the live Player (needs `npm run dev`); works on Windows, GPU through ANGLE. |
 
 > **NODE_ENV:** If your shell exports `NODE_ENV=development`, `vite build` would normally bundle React's development build, which is about 5× slower. `vite.config.ts` forces production for builds, so `npm run present` is always fast.
 
@@ -79,7 +82,8 @@ URL options:
 - `?episode=NotDetected`: choose an episode from `src/videos/registry.ts`.
 - `?fps=30`: preview the 30 fps timing.
 - `/style-lab`: the Style Lab gallery. `/style-lab/03-swarm` opens one sample in the presenter (same keys, plus `[` / `]` for the previous / next sample and `Esc` or `G` for the gallery).
-- `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial`: a redesigned scene with its concept, theme and comparison (`O`, `T`, `C` keys).
+- `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial`: a scene with its concept, theme and comparison (`O`, `T`, `C` keys). Concepts are `original` (legacy sample), `redesign` (2D story scene) and `cinematic` (3D reenactment); `compare=concept:cinematic` puts another treatment beside it.
+- `/style-lab/cine-02-wrong-project`: a cinematic experiment opens as the Cinematic concept of its scene family.
 
 ## Architecture
 
@@ -88,13 +92,17 @@ src/
   engine/        Timeline, beat clocks, property tracks, camera, <EpisodeComposition>
   components/    Reusable primitives: SplitText, Mask, DrawPath, path builders, backdrop, seeded random
     cyber/       Style Lab primitives: 3D stage, agent core, signals, media frames (docs/STYLE_LAB.md)
+    cinematic/   Cinematic 3D primitives: world geography, room, desk, developer, racks, data hall, routes, screen painters
+    story/       2D story primitives of the redesign (workspace, game, chat, machines)
   scenes/        Explainer content. One folder per topic (scene beats + visual layers)
     style-lab/   The ten Style Lab samples
+    redesign/    The ten 2D story scenes
+    cinematic/   The six cinematic 3D experiments
   videos/        Episode definitions + composition components + registry.ts
   player/        Presentation app: usePresenter state machine, keyboard, HUD; lab/ = Style Lab gallery
   remotion/      Remotion entry point (registerRoot) and <Composition> registrations
   styles/        theme.ts (provisional design tokens), cyber.ts (Style Lab tokens), motion.ts, fonts.ts
-scripts/         render.mjs, stills.mjs, verify-video.mjs, lab.mjs (Style Lab tooling)
+scripts/         render.mjs, stills.mjs, verify-video.mjs, lab.mjs / story.mjs / cine.mjs (Style Lab tooling), dev/preview.mjs
 tests/           Playwright specs
 ```
 
@@ -227,6 +235,7 @@ The render script bundles, renders, encodes and then verifies:
   - back, replay, Home/End and deep links
   - the HUD and fullscreen
 - **Screenshots:** one per checkpoint, saved to `test-results/checkpoints/`.
+- **Cinematic experiments tests** (`tests/cinematic-lab.spec.ts`): the gallery section, the three-way concept switch and compare, every experiment walked beat by beat with exact checkpoint frames, back/replay/Home/End, deterministic seeking with shadows and canvas screens, theme switch, fullscreen.
 - **Style Lab tests** (`tests/style-lab.spec.ts`):
   - the gallery lists ten samples with thumbnails; mouse and keyboard navigation
   - every sample is walked beat by beat with real key presses, with exact checkpoint frames, back and replay

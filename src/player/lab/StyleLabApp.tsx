@@ -1,6 +1,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {LAB_SAMPLES, findLabSample, labInfo, type LabSample} from '../../videos/style-lab/registry';
-import {findStoryScene, STORY_SCENES, type StoryScene} from '../../videos/style-lab/redesign';
+import {STORY_SCENES, type StoryScene} from '../../videos/style-lab/redesign';
+import {CINEMATIC_SCENES, type CinematicScene} from '../../videos/style-lab/cinematic';
+import {familyForSlug} from './family';
 import {THEMES, THEME_IDS} from '../../styles/themes';
 import {StoryViewer} from './StoryViewer';
 import {Presenter, type PresenterContext} from '../PresentationApp';
@@ -45,14 +47,15 @@ export const StyleLabApp: React.FC = () => {
   }, []);
 
   const sample = findLabSample(slug);
-  const story = sample ? undefined : findStoryScene(slug);
+  const fam = sample ? undefined : familyForSlug(slug);
   useEffect(() => {
-    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : story ? `${story.title} · Style Lab` : 'Style Lab';
-  }, [sample, story]);
+    document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : fam ? `${fam.family.title} · Style Lab` : 'Style Lab';
+  }, [sample, fam]);
 
   if (sample) return <LabViewer key={sample.slug} sample={sample} navigate={navigate} />;
-  if (story) return <StoryViewer key={story.slug} scene={story} navigate={navigate} />;
-  if (slug && DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} navigate={navigate} />;
+  if (fam && slug) return <StoryViewer key={slug} family={fam.family} initialConcept={fam.concept} route={fam.route} slug={slug} navigate={navigate} />;
+  if (slug && DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} load={DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]} navigate={navigate} />;
+  if (slug && slug.startsWith('cine-') && DEV_CINE[`../../scenes/cinematic/${slug.slice(5)}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} kind="3D" load={DEV_CINE[`../../scenes/cinematic/${slug.slice(5)}/index.tsx`]} navigate={navigate} />;
   return <LabGallery navigate={navigate} />;
 };
 
@@ -105,6 +108,42 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
           <a href="/?episode=RogueAgent">Rogue agent</a>
         </nav>
       </header>
+      <section className="lab-section" aria-labelledby="cine-h">
+        <div className="lab-section-head">
+          <h2 id="cine-h">Cinematic 3D experiments · documentary reenactments</h2>
+          <p>Six moments of the first video staged as physical scenes: a real room, a real hall, cameras that travel. Open one and switch between Original, Redesign and Cinematic 3D.</p>
+        </div>
+        <ol className="lab-grid">
+          {CINEMATIC_SCENES.map((scene) => (
+            <li key={scene.slug}>
+              <a
+                className="cine-tile"
+                href={`${BASE}/${scene.slug}`}
+                data-testid={`cine-tile-${scene.slug}`}
+                onClick={(e) => {
+                  if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+                  e.preventDefault();
+                  navigate(scene.slug);
+                }}
+              >
+                <span className="cine-thumb">
+                  <CineThumb scene={scene} />
+                </span>
+                <span className="lab-caption">
+                  <span className="lab-num">X{num(scene.number)}</span>
+                  <span className="lab-title">{scene.title}</span>
+                  <span className={`lab-kind lab-kind-${scene.kind.toLowerCase()}`}>{scene.kind}</span>
+                </span>
+                <span className="story-tile-understand">{scene.understand}</span>
+                <span className="story-tile-meta">
+                  <span className="pill is-cine">{scene.legacy ? 'Original + Redesign + Cinematic' : 'Redesign + Cinematic'}</span>
+                  <span className="cine-tests">{scene.tests.join(' · ')}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
       <section className="lab-section" aria-labelledby="story-h">
         <div className="lab-section-head">
           <h2 id="story-h">Episode scenes · story-driven redesign</h2>
@@ -207,6 +246,13 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
   );
 };
 
+/** Poster still of a cinematic experiment (`npm run cine:thumbs`); falls back to the number. */
+const CineThumb: React.FC<{readonly scene: CinematicScene}> = ({scene}) => {
+  const [missing, setMissing] = useState(false);
+  if (missing) return <span className="lab-thumb-missing">X{num(scene.number)}</span>;
+  return <img src={`/lab/thumbs/${scene.slug}.jpg`} alt="" width={960} height={540} loading="lazy" onError={() => setMissing(true)} />;
+};
+
 /** Poster still of a redesigned scene (`node scripts/story.mjs thumbs`); falls back to the number. */
 const StoryThumb: React.FC<{readonly scene: StoryScene}> = ({scene}) => {
   const [missing, setMissing] = useState(false);
@@ -266,22 +312,25 @@ const LabViewer: React.FC<{readonly sample: LabSample; readonly navigate: (slug:
   );
 };
 
-/** Any scene folder under src/scenes/redesign can be previewed before it is registered (authoring aid). */
-const DEV_SCENES = import.meta.glob('../../scenes/redesign/*/index.tsx') as Record<string, () => Promise<{episode: StoryScene['episode']; Sample: StoryScene['component']}>>;
+/** Any scene folder under src/scenes/redesign or src/scenes/cinematic (as `cine-<folder>`) can be previewed before it is registered (authoring aid). */
+type DevMod = {episode: StoryScene['episode']; Sample: StoryScene['component']};
+const DEV_SCENES = import.meta.glob('../../scenes/redesign/*/index.tsx') as Record<string, () => Promise<DevMod>>;
+const DEV_CINE = import.meta.glob('../../scenes/cinematic/*/index.tsx') as Record<string, () => Promise<DevMod>>;
 
-const DevStoryViewer: React.FC<{readonly slug: string; readonly navigate: (slug: string | null) => void}> = ({slug, navigate}) => {
+const DevStoryViewer: React.FC<{readonly slug: string; readonly kind?: StoryScene['kind']; readonly load: () => Promise<DevMod>; readonly navigate: (slug: string | null) => void}> = ({slug, kind = '2D', load, navigate}) => {
   const [scene, setScene] = useState<StoryScene | null>(null);
   useEffect(() => {
     let live = true;
-    DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]().then((mod) => {
+    load().then((mod) => {
       if (!live) return;
-      setScene({id: mod.episode.id, slug, number: 0, title: mod.episode.title, kind: '2D', understand: '', idea: '', episode: mod.episode, component: mod.Sample, status: 'built'});
+      setScene({id: mod.episode.id, slug, number: 0, title: mod.episode.title, kind, understand: '', idea: '', episode: mod.episode, component: mod.Sample, status: 'built'});
     });
     return () => {
       live = false;
     };
-  }, [slug]);
-  return scene ? <StoryViewer scene={scene} navigate={navigate} /> : null;
+  }, [slug, kind, load]);
+  // An unregistered scene is a family of one.
+  return scene ? <StoryViewer family={{key: slug, number: 0, title: scene.title, understand: '', story: scene, concepts: ['redesign']}} initialConcept="redesign" route="story" slug={slug} navigate={navigate} /> : null;
 };
 
 /** Buttons that never take keyboard focus, so Space / arrows always reach the presenter. */

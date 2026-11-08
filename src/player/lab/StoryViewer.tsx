@@ -1,17 +1,17 @@
 import {Player, type PlayerRef} from '@remotion/player';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {buildTimeline, type Timeline} from '../../engine';
+import {buildTimeline, type EpisodeDef, type Timeline} from '../../engine';
 import {THEMES, THEME_IDS, type ThemeId} from '../../styles/themes';
-import {findLabSample, LAB_FPS, type LabSample} from '../../videos/style-lab/registry';
-import {STORY_SCENES, type StoryScene} from '../../videos/style-lab/redesign';
+import {LAB_FPS} from '../../videos/style-lab/registry';
 import {Presenter, type PresenterContext} from '../PresentationApp';
+import {otherConcept, siblingSlug, type Concept, type Family, type RouteKind} from './family';
 import {matchFrame} from './sync';
-import {readSelection, writeSelection, type Compare, type Concept, type ViewerSelection} from './url';
+import {readSelection, writeSelection, type Compare, type ViewerSelection} from './url';
 
 /**
- * Viewer for one scene of the redesign: the beat presenter (same keys as
- * everywhere) plus chrome to pick the concept (Original | Redesign), the
- * theme, and a synchronised second view (vs the other concept, or vs another
+ * Viewer for one scene family: the beat presenter (same keys as everywhere)
+ * plus chrome to pick the treatment (Original | Redesign | Cinematic), the
+ * theme, and a synchronised second view (another treatment, or another
  * theme). The selection is reflected in the URL.
  *
  * Compare: the left view is the live presenter; the right view is a follower
@@ -19,25 +19,31 @@ import {readSelection, writeSelection, type Compare, type Concept, type ViewerSe
  * update, so both sit on equivalent moments even when beat lengths differ.
  */
 
-type View = {readonly id: string; readonly title: string; readonly component: React.ComponentType; readonly timeline: Timeline; readonly inputProps: Record<string, unknown>; readonly episode: StoryScene['episode']};
+type View = {readonly id: string; readonly concept: Concept; readonly title: string; readonly component: React.ComponentType; readonly timeline: Timeline; readonly inputProps: Record<string, unknown>; readonly episode: EpisodeDef};
 
-const viewFor = (scene: StoryScene, legacy: LabSample | undefined, concept: Concept, theme: ThemeId): View => {
-  if (concept === 'original' && legacy) {
-    return {id: legacy.id, title: `Original · ${legacy.title}`, component: legacy.component, timeline: buildTimeline(legacy.episode, LAB_FPS), inputProps: {}, episode: legacy.episode};
+const CONCEPT_LABEL: Record<Concept, string> = {original: 'Original', redesign: 'Redesign', cinematic: 'Cinematic 3D'};
+
+const viewFor = (family: Family, concept: Concept, theme: ThemeId): View | null => {
+  if (concept === 'original' && family.legacy) {
+    const l = family.legacy;
+    return {id: l.id, concept, title: `Original · ${l.title}`, component: l.component, timeline: buildTimeline(l.episode, LAB_FPS), inputProps: {}, episode: l.episode};
   }
-  return {
-    id: scene.id,
-    title: `Redesign · ${THEMES[theme].name}`,
-    component: scene.component as React.ComponentType,
-    timeline: buildTimeline(scene.episode, LAB_FPS),
-    inputProps: {theme},
-    episode: scene.episode,
-  };
+  if (concept === 'redesign' && family.story) {
+    const s = family.story;
+    return {id: s.id, concept, title: `Redesign · ${THEMES[theme].name}`, component: s.component as React.ComponentType, timeline: buildTimeline(s.episode, LAB_FPS), inputProps: {theme}, episode: s.episode};
+  }
+  if (concept === 'cinematic' && family.cinematic) {
+    const c = family.cinematic;
+    return {id: c.id, concept, title: `Cinematic 3D · ${THEMES[theme].name}`, component: c.component as React.ComponentType, timeline: buildTimeline(c.episode, LAB_FPS), inputProps: {theme}, episode: c.episode};
+  }
+  return null;
 };
 
-export const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigate: (slug: string | null) => void}> = ({scene, navigate}) => {
-  const legacy = findLabSample(scene.legacy);
-  const [sel, setSel] = useState<ViewerSelection>(() => readSelection(window.location.search));
+/** A concept the family really has, falling back to what exists. */
+const resolveConcept = (family: Family, wanted: Concept): Concept => (family.concepts.includes(wanted) ? wanted : family.concepts[family.concepts.length - 1]);
+
+export const StoryViewer: React.FC<{readonly family: Family; readonly initialConcept: Concept; readonly route: RouteKind; readonly slug: string; readonly navigate: (slug: string | null) => void}> = ({family, initialConcept, route, slug, navigate}) => {
+  const [sel, setSel] = useState<ViewerSelection>(() => readSelection(window.location.search, initialConcept));
   const [initial] = useState(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     return {checkpoint: Number(hash.get('c') ?? 0) || 0, hud: new URLSearchParams(window.location.search).has('hud')};
@@ -48,20 +54,22 @@ export const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigat
     const q = new URLSearchParams(window.location.search);
     const extra = new URLSearchParams();
     if (q.has('hud')) extra.set('hud', '');
-    window.history.replaceState(null, '', `${window.location.pathname}${writeSelection(sel, extra)}${window.location.hash}`);
-  }, [sel]);
+    window.history.replaceState(null, '', `${window.location.pathname}${writeSelection(sel, initialConcept, extra)}${window.location.hash}`);
+  }, [sel, initialConcept]);
 
-  const concept: Concept = sel.concept === 'original' && legacy ? 'original' : 'redesign';
-  const primary = useMemo(() => viewFor(scene, legacy, concept, sel.theme), [scene, legacy, concept, sel.theme]);
+  const concept = resolveConcept(family, sel.concept);
+  const primary = useMemo(() => viewFor(family, concept, sel.theme)!, [family, concept, sel.theme]);
   const secondary = useMemo<View | null>(() => {
-    if (sel.compare.kind === 'concept' && legacy) return viewFor(scene, legacy, concept === 'original' ? 'redesign' : 'original', sel.theme);
-    if (sel.compare.kind === 'theme') return viewFor(scene, legacy, 'redesign', sel.compare.theme);
+    if (sel.compare.kind === 'concept') {
+      const target = sel.compare.concept && sel.compare.concept !== concept && family.concepts.includes(sel.compare.concept) ? sel.compare.concept : otherConcept(family, concept);
+      return target ? viewFor(family, target, sel.theme) : null;
+    }
+    if (sel.compare.kind === 'theme') return viewFor(family, concept, sel.compare.theme);
     return null;
-  }, [sel.compare, scene, legacy, concept, sel.theme]);
+  }, [sel.compare, family, concept, sel.theme]);
 
   const entry = useMemo(() => ({id: primary.id, episode: primary.episode, component: primary.component}), [primary]);
-  const index = STORY_SCENES.indexOf(scene);
-  const sibling = useCallback((d: number) => STORY_SCENES[(index + d + STORY_SCENES.length) % STORY_SCENES.length], [index]);
+  const sibling = useCallback((d: number) => siblingSlug(route, slug, d), [route, slug]);
 
   // Follower.
   const followerRef = useRef<PlayerRef>(null);
@@ -74,6 +82,14 @@ export const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigat
     [primary.timeline, secondary],
   );
 
+  const cycleConcept = useCallback(() => {
+    setSel((s) => {
+      const list = family.concepts;
+      const i = list.indexOf(resolveConcept(family, s.concept));
+      return {...s, concept: list[(i + 1) % list.length]};
+    });
+  }, [family]);
+
   const onKey = useCallback(
     (e: KeyboardEvent): boolean => {
       if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') {
@@ -82,28 +98,32 @@ export const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigat
         return true;
       }
       if (e.key === '[' || e.key === ']') {
-        navigate(sibling(e.key === ']' ? 1 : -1).slug);
+        navigate(sibling(e.key === ']' ? 1 : -1));
         return true;
       }
       if (e.key === 't' || e.key === 'T') {
         setSel((s) => ({...s, theme: THEME_IDS[(THEME_IDS.indexOf(s.theme) + 1) % THEME_IDS.length]}));
         return true;
       }
-      if ((e.key === 'o' || e.key === 'O') && legacy) {
-        setSel((s) => ({...s, concept: s.concept === 'original' ? 'redesign' : 'original'}));
+      if ((e.key === 'o' || e.key === 'O') && family.concepts.length > 1) {
+        cycleConcept();
         return true;
       }
       if (e.key === 'c' || e.key === 'C') {
-        setSel((s) => ({...s, compare: s.compare.kind === 'off' ? (legacy ? {kind: 'concept'} : {kind: 'theme', theme: nextTheme(s.theme)}) : {kind: 'off'}}));
+        setSel((s) => {
+          if (s.compare.kind === 'off') return {...s, compare: family.concepts.length > 1 ? {kind: 'concept'} : {kind: 'theme', theme: nextTheme(s.theme)}};
+          if (s.compare.kind === 'concept') return {...s, compare: {kind: 'theme', theme: nextTheme(s.theme)}};
+          return {...s, compare: {kind: 'off'}};
+        });
         return true;
       }
       return false;
     },
-    [navigate, sibling, legacy],
+    [navigate, sibling, family, cycleConcept],
   );
 
   return (
-    <div className="story-viewer" data-compare={secondary ? 'true' : 'false'} data-testid="story-viewer">
+    <div className="story-viewer" data-compare={secondary ? 'true' : 'false'} data-concept={concept} data-testid="story-viewer">
       <div className="story-pane story-pane-primary">
         <Presenter
           key={primary.id + JSON.stringify(primary.inputProps)}
@@ -113,7 +133,7 @@ export const StoryViewer: React.FC<{readonly scene: StoryScene; readonly navigat
           initialHud={initial.hud}
           onKey={onKey}
           onFrame={onFrame}
-          chrome={(ctx) => <StoryChrome ctx={ctx} scene={scene} legacy={legacy} sel={sel} setSel={setSel} navigate={navigate} sibling={sibling} primary={primary} secondary={secondary} />}
+          chrome={(ctx) => <StoryChrome ctx={ctx} family={family} concept={concept} sel={sel} setSel={setSel} navigate={navigate} sibling={sibling} primary={primary} secondary={secondary} />}
         />
       </div>
       {secondary ? (
@@ -157,20 +177,24 @@ const Btn: React.FC<{readonly onClick: () => void; readonly title: string; reado
 );
 
 /** The shell command that exports exactly what is on screen. */
-export const renderCommand = (scene: StoryScene, sel: ViewerSelection): string =>
-  sel.concept === 'original' && scene.legacy ? `npm run lab:render -- ${scene.legacy}` : `npm run story:render -- ${scene.slug} --theme=${sel.theme}`;
+export const renderCommand = (family: Family, concept: Concept, theme: ThemeId): string => {
+  if (concept === 'original' && family.legacy) return `npm run lab:render -- ${family.legacy.slug}`;
+  if (concept === 'cinematic' && family.cinematic) return `npm run cine:render -- ${family.cinematic.slug.replace(/^cine-/, '')} --theme=${theme}`;
+  if (family.story) return `npm run story:render -- ${family.story.slug} --theme=${theme}`;
+  return '';
+};
 
 const StoryChrome: React.FC<{
   readonly ctx: PresenterContext;
-  readonly scene: StoryScene;
-  readonly legacy?: LabSample;
+  readonly family: Family;
+  readonly concept: Concept;
   readonly sel: ViewerSelection;
   readonly setSel: React.Dispatch<React.SetStateAction<ViewerSelection>>;
   readonly navigate: (slug: string | null) => void;
-  readonly sibling: (d: number) => StoryScene;
+  readonly sibling: (d: number) => string;
   readonly primary: View;
   readonly secondary: View | null;
-}> = ({ctx, scene, legacy, sel, setSel, navigate, sibling, primary, secondary}) => {
+}> = ({ctx, family, concept, sel, setSel, navigate, sibling, primary, secondary}) => {
   const {presenter, timeline} = ctx;
   const {state} = presenter;
   const N = timeline.beats.length;
@@ -178,8 +202,13 @@ const StoryChrome: React.FC<{
   const visible = ctx.cursorVisible || ctx.hud;
   const upcoming = state.status === 'playing' ? timeline.beats[state.beat ?? 0] : timeline.beats[state.checkpoint];
   const [copied, setCopied] = useState(false);
-  const cmd = renderCommand(scene, sel);
+  const cmd = renderCommand(family, concept, sel.theme);
   const setCompare = (compare: Compare) => setSel((s) => ({...s, compare}));
+  const themeable = concept !== 'original';
+  const number = concept === 'cinematic' && family.cinematic ? `X${String(family.cinematic.number).padStart(2, '0')}` : `S${String(family.number).padStart(2, '0')}`;
+  const kind = concept === 'cinematic' && family.cinematic ? family.cinematic.kind : concept === 'original' && family.legacy ? family.legacy.kind : (family.story?.kind ?? '3D');
+  const others = family.concepts.filter((c) => c !== concept);
+  const compareTarget = sel.compare.kind === 'concept' ? (sel.compare.concept && others.includes(sel.compare.concept) ? sel.compare.concept : otherConcept(family, concept)) : undefined;
 
   return (
     <div className="lab-chrome story-chrome" data-visible={visible ? 'true' : 'false'} data-testid="lab-chrome">
@@ -188,19 +217,19 @@ const StoryChrome: React.FC<{
           &larr; Gallery
         </Btn>
         <div className="lab-bar-title" data-testid="lab-title">
-          <span className="lab-num">S{String(scene.number).padStart(2, '0')}</span>
-          {scene.title}
-          <span className={`lab-kind lab-kind-${scene.kind.toLowerCase()}`}>{scene.kind}</span>
+          <span className="lab-num">{number}</span>
+          {family.title}
+          <span className={`lab-kind lab-kind-${kind.toLowerCase()}`}>{kind}</span>
           <span className="story-view-title" data-testid="story-view-title">
             {primary.title}
             {secondary ? ` · vs ${secondary.title}` : ''}
           </span>
         </div>
         <div className="lab-bar-actions">
-          <Btn onClick={() => navigate(sibling(-1).slug)} title="Previous scene ( [ )" testId="lab-prev-sample">
+          <Btn onClick={() => navigate(sibling(-1))} title="Previous scene ( [ )" testId="lab-prev-sample">
             Previous
           </Btn>
-          <Btn onClick={() => navigate(sibling(1).slug)} title="Next scene ( ] )" testId="lab-next-sample">
+          <Btn onClick={() => navigate(sibling(1))} title="Next scene ( ] )" testId="lab-next-sample">
             Next
           </Btn>
           <i />
@@ -223,17 +252,20 @@ const StoryChrome: React.FC<{
       <div className="story-controls" data-testid="story-controls">
         <div className="story-group" role="group" aria-label="Concept">
           <span className="story-label">Concept</span>
-          <Btn onClick={() => setSel((s) => ({...s, concept: 'original'}))} title={legacy ? `Original: ${legacy.title} (O)` : 'This scene has no original prototype'} active={sel.concept === 'original' && !!legacy} disabled={!legacy} testId="story-concept-original">
-            Original
-          </Btn>
-          <Btn onClick={() => setSel((s) => ({...s, concept: 'redesign'}))} title="Redesign (O)" active={sel.concept === 'redesign' || !legacy} testId="story-concept-redesign">
-            Redesign
-          </Btn>
+          {(['original', 'redesign', 'cinematic'] as const).map((c) => {
+            const has = family.concepts.includes(c);
+            const hint = c === 'original' ? (family.legacy ? `Original: ${family.legacy.title}` : 'This scene has no original prototype') : c === 'redesign' ? (family.story ? 'The 2D story-driven redesign' : 'No 2D redesign of this scene') : family.cinematic ? 'The cinematic 3D reenactment' : 'No cinematic experiment for this scene';
+            return (
+              <Btn key={c} onClick={() => setSel((s) => ({...s, concept: c}))} title={`${hint} (O cycles)`} active={concept === c} disabled={!has} testId={`story-concept-${c}`}>
+                {CONCEPT_LABEL[c]}
+              </Btn>
+            );
+          })}
         </div>
         <div className="story-group" role="group" aria-label="Theme">
           <span className="story-label">Theme</span>
           {THEME_IDS.map((id) => (
-            <Btn key={id} onClick={() => setSel((s) => ({...s, theme: id}))} title={`${THEMES[id].name}: ${THEMES[id].mood} (T cycles)`} active={sel.theme === id} disabled={sel.concept === 'original' && !!legacy} testId={`story-theme-${id}`}>
+            <Btn key={id} onClick={() => setSel((s) => ({...s, theme: id}))} title={`${THEMES[id].name}: ${THEMES[id].mood} (T cycles)`} active={sel.theme === id} disabled={!themeable} testId={`story-theme-${id}`}>
               <span className="story-swatch" style={{background: `linear-gradient(135deg, ${THEMES[id].tone.mind.base}, ${THEMES[id].tone.system.base} 60%, ${THEMES[id].tone.threat.base})`}} />
               {THEMES[id].name}
             </Btn>
@@ -244,10 +276,20 @@ const StoryChrome: React.FC<{
           <Btn onClick={() => setCompare({kind: 'off'})} title="Single view" active={sel.compare.kind === 'off'} testId="story-compare-off">
             Off
           </Btn>
-          <Btn onClick={() => setCompare({kind: 'concept'})} title="Original vs redesign, synchronised at matching beats (C)" active={sel.compare.kind === 'concept'} disabled={!legacy} testId="story-compare-concept">
-            vs Original
+          <Btn
+            onClick={() => {
+              // Click again to cycle through the other treatments.
+              const next = compareTarget ? others[(others.indexOf(compareTarget) + 1) % others.length] : otherConcept(family, concept);
+              setCompare({kind: 'concept', concept: sel.compare.kind === 'concept' ? next : otherConcept(family, concept)});
+            }}
+            title="This treatment next to another one, synchronised at matching beats (C). Click again to cycle."
+            active={sel.compare.kind === 'concept'}
+            disabled={others.length === 0}
+            testId="story-compare-concept"
+          >
+            vs {compareTarget ? CONCEPT_LABEL[compareTarget] : otherConcept(family, concept) ? CONCEPT_LABEL[otherConcept(family, concept)!] : 'other'}
           </Btn>
-          <Btn onClick={() => setCompare({kind: 'theme', theme: sel.compare.kind === 'theme' ? nextTheme(sel.compare.theme) : nextTheme(sel.theme)})} title="Theme A vs theme B (click again to cycle B)" active={sel.compare.kind === 'theme'} testId="story-compare-theme">
+          <Btn onClick={() => setCompare({kind: 'theme', theme: sel.compare.kind === 'theme' ? nextTheme(sel.compare.theme) : nextTheme(sel.theme)})} title="Theme A vs theme B (click again to cycle B)" active={sel.compare.kind === 'theme'} disabled={!themeable} testId="story-compare-theme">
             vs Theme{sel.compare.kind === 'theme' ? `: ${THEMES[sel.compare.theme].name}` : ''}
           </Btn>
         </div>

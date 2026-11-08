@@ -28,7 +28,13 @@
     "story:stills": "node scripts/story.mjs stills",
     "story:thumbs": "node scripts/story.mjs thumbs",
     "story:sheet": "node scripts/story.mjs sheet",
-    "story:preview": "node scripts/dev/preview.mjs"
+    "story:preview": "node scripts/dev/preview.mjs",
+    "cine:render": "node scripts/cine.mjs render",
+    "cine:stills": "node scripts/cine.mjs stills",
+    "cine:thumbs": "node scripts/cine.mjs thumbs",
+    "cine:sheet": "node scripts/cine.mjs sheet",
+    "cine:frames": "node scripts/cine.mjs frames",
+    "cine:preview": "node scripts/dev/preview.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.540",

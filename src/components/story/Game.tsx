@@ -18,14 +18,14 @@ import {clamp01, f2, lerp, seg} from './math';
  * Coordinates: drawn in a 192 x 108 pixel grid, scaled to `width` x `height`.
  */
 
-const GW = 192;
-const GH = 108;
-const GROUND = 86;
+export const GW = 192;
+export const GH = 108;
+export const GROUND = 86;
 
-type Sprite = {readonly rows: readonly string[]; readonly palette: Readonly<Record<string, string>>};
+export type Sprite = {readonly rows: readonly string[]; readonly palette: Readonly<Record<string, string>>};
 
 // 12 x 10 slime with two little horns: unmistakably an enemy.
-const SLIME: Sprite = {
+export const SLIME: Sprite = {
   rows: [
     '..h......h..',
     '..hh....hh..',
@@ -42,7 +42,7 @@ const SLIME: Sprite = {
 };
 
 // 9 x 13 knight with a red plume and a sword.
-const KNIGHT: Sprite = {
+export const KNIGHT: Sprite = {
   rows: [
     '...RR....',
     '..RRR....',

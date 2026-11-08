@@ -7,6 +7,7 @@ import {RogueAgent} from '../videos/rogue-agent/RogueAgent';
 import {rogueAgentEpisode} from '../videos/rogue-agent/episode';
 import {LAB_FPS, LAB_SAMPLES, labInfo} from '../videos/style-lab/registry';
 import {STORY_SCENES} from '../videos/style-lab/redesign';
+import {CINEMATIC_SCENES} from '../videos/style-lab/cinematic';
 import {DEFAULT_THEME} from '../styles/themes';
 
 /**
@@ -65,6 +66,24 @@ export const RemotionRoot: React.FC = () => {
       {/* Redesign: story-driven scenes (ids `story-02-wrong-project` ...). Theme is an input prop: --props='{"theme":"infrared"}'. */}
       <Folder name="Story">
         {STORY_SCENES.map((scene) => {
+          const t = buildTimeline(scene.episode, LAB_FPS);
+          return (
+            <Composition
+              key={scene.id}
+              id={scene.id}
+              component={scene.component as React.ComponentType<Record<string, unknown>>}
+              fps={LAB_FPS}
+              width={scene.episode.width ?? 1920}
+              height={scene.episode.height ?? 1080}
+              durationInFrames={t.durationInFrames}
+              defaultProps={{theme: DEFAULT_THEME}}
+            />
+          );
+        })}
+      </Folder>
+      {/* Cinematic 3D experiments (ids `cine-01-john` ...). Theme is an input prop, as for Story. */}
+      <Folder name="Cinematic">
+        {CINEMATIC_SCENES.map((scene) => {
           const t = buildTimeline(scene.episode, LAB_FPS);
           return (
             <Composition
