@@ -14,6 +14,7 @@ import {buildRoute, HERO_RACK, hallDirToWorld, hallToWorld, heroBayLocal} from '
 import {CHAT_MONITOR, GAME_MONITOR, HALL_TO_WORLD, ROOM, WALL_PORT} from '../../../components/cinematic/world';
 import {ease, lerp, seg, smooth} from '../../../components/story/math';
 import {useActiveTime, useBeats, useScalarTrack} from '../../../engine';
+import {useShotRig} from '../../../shot';
 import {useTheme} from '../../../styles/ThemeContext';
 
 /**
@@ -51,7 +52,8 @@ import {useTheme} from '../../../styles/ThemeContext';
 const ROUTE = buildRoute();
 const HERO_BAY = hallToWorld(heroBayLocal());
 
-const CAM0: Rig = {position: [-1.1, 1.42, 1.45], target: [0.5, 1.12, -0.24], fov: 27};
+/** The opening camera (also the pose the editable shot locks to, see ./shot.ts). */
+export const CAM0: Rig = {position: [-1.1, 1.42, 1.45], target: [0.5, 1.12, -0.24], fov: 27};
 const RIG_TRACK = [
   {beat: 'wp-tab', to: {position: [-0.62, 1.3, 0.9] as Vec3, target: [0.5, 1.12, -0.24] as Vec3, fov: 22}, from: 0.2, until: 2.6},
   // Tilt down and pull out as the pulse runs down the cable to the wall port.
@@ -118,7 +120,7 @@ export const WrongProjectScene: React.FC = () => {
   // Down the cold aisle on a longer lens: the row recedes, the hero rack sits a third of the way in, purple among blue.
   const finalPos = hallToWorld([heroBayLocal()[0] - 1.7, 1.4, heroBayLocal()[2] - 1.3]);
   const finalTarget: Vec3 = [HERO_BAY[0], HERO_BAY[1] + 0.05, HERO_BAY[2]];
-  const rig: Rig = {
+  const codeRig: Rig = {
     position: [
       lerp(lerp(keyed.position[0], followPos[0], follow), finalPos[0], settle),
       lerp(lerp(keyed.position[1], followPos[1], follow), finalPos[1], settle),
@@ -131,6 +133,8 @@ export const WrongProjectScene: React.FC = () => {
     ],
     fov: lerp(lerp(keyed.fov, 36, follow), 40, settle),
   };
+  // The shot camera: this choreography, unless the shot config locks it or keys a camera track (./shot.ts).
+  const rig = useShotRig(codeRig);
 
   // ---- the hall ------------------------------------------------------------------
   const inside = seg(routeT, ROUTE.marks.building, ROUTE.marks.building + 0.55 * (ROUTE.marks.roof - ROUTE.marks.building)); // the roof opens while the pulse climbs the facade, so coming over the edge reveals the hall

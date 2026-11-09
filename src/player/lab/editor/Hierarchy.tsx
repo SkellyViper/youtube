@@ -56,6 +56,13 @@ export const Hierarchy: React.FC<{
           </ul>
         </section>
       ))}
+      {groups.size === 0 ? (
+        <section className="se-tree-group">
+          <h3>Objects</h3>
+          <p className="se-empty se-tree-note">This scene exposes its camera and timing only. Objects become editable when the scene is converted (docs/STYLE_LAB_V2.md).</p>
+        </section>
+      ) : null}
+      {Object.keys(def.lights).length ? (
       <section className="se-tree-group">
         <h3>Lights</h3>
         <ul>
@@ -76,26 +83,39 @@ export const Hierarchy: React.FC<{
           })}
         </ul>
       </section>
+      ) : null}
       <section className="se-tree-group">
         <h3>Shot</h3>
         <ul>
           <li data-selected={isSel({kind: 'camera'}) ? 'true' : 'false'}>
-            <button type="button" className="se-eye" aria-label={state.camera.locked ? 'Unlock camera' : 'Lock camera'} aria-pressed={state.camera.locked} data-testid="camera-lock-quick" onClick={() => draft.set(['camera', 'locked'], !state.camera.locked)}>
-              <Lock locked={state.camera.locked} />
+            <button
+              type="button"
+              className="se-eye"
+              aria-label={state.camera.mode === 'locked' ? 'Unlock camera' : 'Lock camera'}
+              aria-pressed={state.camera.mode === 'locked'}
+              data-testid="camera-lock-quick"
+              onClick={() => {
+                const m = state.camera.mode === 'locked' ? (Object.keys(state.camera.keys).length ? 'keys' : 'code') : 'locked';
+                draft.replace({...draft.patch, camera: {...(draft.patch.camera ?? {}), mode: m, locked: m === 'locked'}}, `Camera: ${m}`);
+              }}
+            >
+              <Lock locked={state.camera.mode === 'locked'} />
             </button>
             <button type="button" className="se-node" data-testid="node-camera" onClick={() => select({kind: 'camera'})}>
               Camera
-              <span className="se-role">{state.camera.locked ? 'locked' : 'moves'}</span>
+              <span className="se-role">{state.camera.mode === 'keys' ? `${Object.keys(state.camera.keys).length} keys` : state.camera.mode}</span>
               {changed(['camera']) ? <span className="se-mod" aria-label="changed" /> : null}
             </button>
           </li>
-          <li data-selected={isSel({kind: 'stage'}) ? 'true' : 'false'}>
-            <span className="se-eye" />
-            <button type="button" className="se-node" data-testid="node-stage" onClick={() => select({kind: 'stage'})}>
-              Lighting + stage
-              {changed(['stage']) ? <span className="se-mod" aria-label="changed" /> : null}
-            </button>
-          </li>
+          {def.stage ? (
+            <li data-selected={isSel({kind: 'stage'}) ? 'true' : 'false'}>
+              <span className="se-eye" />
+              <button type="button" className="se-node" data-testid="node-stage" onClick={() => select({kind: 'stage'})}>
+                Lighting + stage
+                {changed(['stage']) ? <span className="se-mod" aria-label="changed" /> : null}
+              </button>
+            </li>
+          ) : null}
         </ul>
       </section>
     </nav>

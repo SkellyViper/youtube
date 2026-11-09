@@ -3,6 +3,7 @@ import {HALL, rackAt, rackYaw} from '../../../components/cinematic/world';
 import {useCameraRig, type Rig, type Vec3} from '../../../components/cyber/three/rig';
 import {bump, ease} from '../../../components/story/math';
 import type {BeatClock} from '../../../engine';
+import {useShotRig} from '../../../shot';
 
 /**
  * X06 · Real evidence in a cinematic environment (hybrid: a 3D hall, real documents).
@@ -90,8 +91,15 @@ const RIG_TRACK = [
   {beat: 'ev-return', to: CAM_BACK, from: 0.3, until: 2.6},
 ];
 
-/** The camera, shared by the 3D layer (which renders it) and the 2D layer (which projects with it). */
-export const useEvidenceRig = (): Rig => useCameraRig(CAM0, RIG_TRACK);
+/**
+ * The camera, shared by the 3D layer (which renders it) and the 2D layer (which projects with it).
+ * It is the shot camera: this choreography unless the shot config locks it or keys a camera track
+ * (./shot.ts), so the 2D pins always follow the camera the 3D layer renders with.
+ */
+export const useEvidenceRig = (): Rig => {
+  const codeRig = useCameraRig(CAM0, RIG_TRACK);
+  return useShotRig(codeRig);
+};
 
 /* ------------------------------------------------------------------ shared progress values */
 

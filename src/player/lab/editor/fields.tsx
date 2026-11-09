@@ -170,6 +170,12 @@ export const SelectField: React.FC<Common & {readonly value: string; readonly op
   </Row>
 );
 
+export const TextField: React.FC<Common & {readonly value: string; readonly onChange: (v: string) => void; readonly placeholder?: string}> = ({value, onChange, placeholder, ...row}) => (
+  <Row {...row}>
+    <input className="se-text" type="text" value={value} placeholder={placeholder} aria-label={row.label} onChange={(e) => onChange(e.target.value)} />
+  </Row>
+);
+
 export const Section: React.FC<{readonly title: string; readonly children: React.ReactNode; readonly aside?: React.ReactNode}> = ({title, children, aside}) => (
   <section className="se-section">
     <header>

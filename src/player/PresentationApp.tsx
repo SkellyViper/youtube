@@ -27,6 +27,8 @@ export type PresenterContext = {
   readonly toggleFullscreen: () => void;
   /** False after 1.5 s without mouse movement: hide your chrome too. */
   readonly cursorVisible: boolean;
+  /** Show an arbitrary frame, paused (scrubbing in the shot editor's timeline). */
+  readonly seek: (frame: number) => void;
 };
 
 /**
@@ -71,8 +73,16 @@ export const Presenter: React.FC<{
     }
   }, []);
   const toggleHud = useCallback(() => setHud((v) => !v), []);
+  const seek = useCallback(
+    (frame: number) => {
+      presenterRef.current.pause();
+      playerRef.current?.pause();
+      playerRef.current?.seekTo(Math.max(0, Math.min(timeline.durationInFrames - 1, Math.round(frame))));
+    },
+    [timeline],
+  );
 
-  const context: PresenterContext = {presenter, timeline, hud, toggleHud, isFullscreen, toggleFullscreen, cursorVisible};
+  const context: PresenterContext = {presenter, timeline, hud, toggleHud, isFullscreen, toggleFullscreen, cursorVisible, seek};
   const contextRef = useRef(context);
   contextRef.current = context;
   const onKeyRef = useRef(onKey);

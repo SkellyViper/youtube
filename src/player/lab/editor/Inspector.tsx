@@ -1,8 +1,8 @@
 import React from 'react';
 import type {Rig} from '../../../components/cyber/three/rig';
 import type {Timeline} from '../../../engine';
-import {EASING_HINTS, EASING_NAMES, LIGHTING_PRESETS, leafPaths, type MaterialLook, type Path, type Selection, type ShotDef, type ShotState} from '../../../shot';
-import {ColorField, NumberField, Section, SelectField, ToggleField, Vec3Field} from './fields';
+import {EASING_HINTS, EASING_NAMES, keyFrame, LIGHTING_PRESETS, leafPaths, sortedKeys, type CameraMode, type CameraPose, type MaterialLook, type Path, type Selection, type ShotDef, type ShotState} from '../../../shot';
+import {ColorField, NumberField, Section, SelectField, TextField, ToggleField, Vec3Field} from './fields';
 import type {ShotDraft} from './useShotDraft';
 
 /**
@@ -21,6 +21,14 @@ export type InspectorProps = {
   readonly frame: number;
   readonly inspect: Rig | null;
   readonly applyPreset: (id: string) => void;
+  /** Camera-track actions owned by the editor. */
+  readonly camera: {
+    addKey: (cut: boolean, pose?: CameraPose, label?: string) => string;
+    seek: (frame: number) => void;
+    bake: () => Promise<void>;
+    baking: boolean;
+    currentView: () => CameraPose;
+  };
 };
 
 /** Binding helper: value + modified + change + reset for one patch path. */
@@ -42,6 +50,8 @@ export const Inspector: React.FC<InspectorProps> = (props) => {
       {selection?.kind === 'stage' ? <StageInspector {...props} /> : null}
       {selection?.kind === 'beat' ? <BeatInspector {...props} id={selection.id} /> : null}
       {selection?.kind === 'motion' ? <MotionInspector {...props} id={selection.id} /> : null}
+      {selection?.kind === 'key' ? <KeyInspector {...props} id={selection.id} /> : null}
+      {selection?.kind === 'note' ? <NoteInspector {...props} id={selection.id} /> : null}
     </aside>
   );
 };
@@ -57,19 +67,44 @@ const Head: React.FC<{readonly kicker: string; readonly title: string; readonly 
 
 /* ------------------------------------------------------------------ changes */
 
-const ChangesPanel: React.FC<InspectorProps> = ({def, draft, select}) => {
-  const paths = leafPaths(draft.patch).filter((p) => !['version', 'shot', 'note'].includes(p[0]));
+const ChangesPanel: React.FC<InspectorProps> = ({def, state, draft, select, timeline, camera}) => {
+  const paths = leafPaths(draft.patch).filter((p) => !['version', 'shot', 'note', 'notes'].includes(p[0]) && !(p[0] === 'camera' && p[1] === 'keys' && p.length > 3));
+  const notes = Object.entries(state.notes).sort(([, a], [, b]) => keyFrame(timeline, a) - keyFrame(timeline, b));
   return (
     <>
       <Head kicker="Shot" title={def.title} id={def.id}>
-        <p className="se-purpose">Select an object, light, the camera or a beat to edit it. This list is every property the draft overrides; everything else comes from code.</p>
+        <p className="se-purpose">Scrub the timeline, key or cut the camera (K / C), pin notes (N). Select anything to edit it. Below: your review notes, then every property the draft overrides; everything else comes from code.</p>
       </Head>
+      <Section title={`Review notes (${notes.length})`}>
+        {notes.length === 0 ? <p className="se-empty">No notes yet. Press N on the timeline to pin one at the playhead.</p> : null}
+        <ul className="se-list" data-testid="notes-list">
+          {notes.map(([id, n]) => (
+            <li key={id}>
+              <button
+                type="button"
+                className="se-link"
+                onClick={() => {
+                  camera.seek(keyFrame(timeline, n));
+                  select({kind: 'note', id});
+                }}
+              >
+                {n.done ? '✓ ' : '⚑ '}
+                {n.text || 'Empty note'}
+              </button>
+              <span className="se-dim">
+                {n.beat} +{n.t.toFixed(2)} s
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Section>
       <Section title={`Changes vs code (${paths.length})`}>
         {paths.length === 0 ? <p className="se-empty">No changes: the shot is exactly as written in code.</p> : null}
         <ul className="se-changes" data-testid="shot-changes">
           {paths.map((p) => {
             const v = draft.get(p);
-            const target = p[0] === 'objects' ? ({kind: 'object', id: p[1]} as const) : p[0] === 'lights' ? ({kind: 'light', id: p[1]} as const) : p[0] === 'camera' ? ({kind: 'camera'} as const) : p[0] === 'stage' ? ({kind: 'stage'} as const) : p[0] === 'beats' ? ({kind: 'beat', id: p[1]} as const) : ({kind: 'motion', id: p[1]} as const);
+            const target: Selection =
+              p[0] === 'objects' ? {kind: 'object', id: p[1]} : p[0] === 'lights' ? {kind: 'light', id: p[1]} : p[0] === 'camera' ? (p[1] === 'keys' && p[2] ? {kind: 'key', id: p[2]} : {kind: 'camera'}) : p[0] === 'stage' ? {kind: 'stage'} : p[0] === 'beats' ? {kind: 'beat', id: p[1]} : p[0] === 'notes' ? {kind: 'note', id: p[1]} : {kind: 'motion', id: p[1]};
             return (
               <li key={p.join('.')}>
                 <button type="button" className="se-link" onClick={() => select(target)}>
@@ -208,56 +243,227 @@ const LightInspector: React.FC<InspectorProps & {readonly id: string}> = ({def, 
 
 /* ------------------------------------------------------------------ camera */
 
-const CameraInspector: React.FC<InspectorProps> = ({state, draft, inspect, timeline}) => {
+const MODES: readonly {readonly id: CameraMode; readonly label: string; readonly hint: string}[] = [
+  {id: 'keys', label: 'Keyframes', hint: 'The camera track on the timeline: keys, moves and cuts you place.'},
+  {id: 'locked', label: 'Locked', hint: 'One fixed pose for the whole shot.'},
+  {id: 'code', label: 'Code', hint: 'The camera the scene was written with.'},
+];
+
+const CameraInspector: React.FC<InspectorProps> = ({def, state, draft, timeline, select, camera, frame}) => {
   const bind = useBind(draft);
   const c = state.camera;
   const p = (...k: string[]): Path => ['camera', ...k];
-  const useView = () => {
-    if (!inspect) return;
-    const r = (v: number) => Math.round(v * 1000) / 1000;
-    draft.replace(
-      {...draft.patch, camera: {...(draft.patch.camera ?? {}), position: inspect.position.map(r) as [number, number, number], target: inspect.target.map(r) as [number, number, number], fov: r(inspect.fov)}},
-      'Use inspection view as shot camera',
-    );
+  const keys = sortedKeys(c, timeline);
+  const setMode = (m: CameraMode) => draft.replace({...draft.patch, camera: {...(draft.patch.camera ?? {}), mode: m, locked: m === 'locked'}}, `Camera: ${m}`);
+  const [angleName, setAngleName] = React.useState('');
+  const saveAngle = () => {
+    const v = camera.currentView();
+    const id = (angleName || `Angle ${Object.keys(c.angles).length + 1}`).trim();
+    draft.set(['camera', 'angles', id.toLowerCase().replace(/[^a-z0-9]+/g, '-')], {label: id, position: v.position, target: v.target, fov: v.fov, roll: v.roll});
+    setAngleName('');
   };
+  const hasMoves = Object.keys(def.camera.moves ?? {}).length > 0;
   return (
     <>
       <Head kicker="Camera" title="Shot camera">
-        <p className="se-purpose">The camera of the rendered shot. Locked, it stays exactly here on every beat; objects move, the frame does not. The free inspection camera never affects it.</p>
+        <p className="se-purpose">Direct the camera like an editor: scrub to a moment, find the view (Fly or Free), press K for a move or C for a cut. Keys live on the timeline; drag them to retime. The free camera never changes the render.</p>
       </Head>
-      <Section title="Lock">
-        <ToggleField label="Camera" on="Locked" off="Moves per beat" {...bind(p('locked'), c.locked)} testId="cam-lock" />
-        <button type="button" className="se-btn" onClick={useView} disabled={!inspect} data-testid="use-view" title={inspect ? 'Copy the free camera’s view into the shot camera' : 'Turn on the inspection camera first'}>
-          Use inspection view as shot camera
-        </button>
+      <Section title="Mode">
+        <div className="se-modes" role="group" aria-label="Camera mode" data-testid="cam-mode">
+          {MODES.map((m) => (
+            <button key={m.id} type="button" aria-pressed={c.mode === m.id} title={m.hint} onClick={() => setMode(m.id)} data-testid={`cam-mode-${m.id}`}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {c.mode === 'code' ? (
+          <div className="se-row">
+            <button type="button" className="se-btn" onClick={() => void camera.bake()} disabled={camera.baking} data-testid="bake" title="Sample the scene's own camera into keyframes so every move becomes editable">
+              Convert the code camera to keyframes
+            </button>
+          </div>
+        ) : null}
+      </Section>
+      {c.mode === 'keys' || keys.length ? (
+        <Section title={`Keyframes (${keys.length})`} aside={<span className="se-note">{c.mode === 'keys' ? 'active' : 'inactive in this mode'}</span>}>
+          <div className="se-row">
+            <button type="button" className="se-btn se-btn-small" onClick={() => camera.addKey(false)} data-testid="insp-key">
+              ◆ Key at playhead
+            </button>
+            <button type="button" className="se-btn se-btn-small" onClick={() => camera.addKey(true)} data-testid="insp-cut">
+              ✂ Cut at playhead
+            </button>
+          </div>
+          <ul className="se-list" data-testid="key-list">
+            {keys.map(([id, k]) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  className="se-link"
+                  onClick={() => {
+                    camera.seek(keyFrame(timeline, k));
+                    select({kind: 'key', id});
+                  }}
+                >
+                  {k.cut ? '✂' : '◆'} {k.label || (k.cut ? 'Cut' : 'Key')}
+                </button>
+                <span className="se-dim">
+                  f{keyFrame(timeline, k)} · {k.beat} +{k.t.toFixed(2)} s · {k.cut ? 'cut' : k.ease}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
+      <Section title={`Angle bin (${Object.keys(c.angles).length})`}>
+        <div className="se-row">
+          <input className="se-text" style={{flex: 1}} placeholder="Name this view" value={angleName} onChange={(e) => setAngleName(e.target.value)} aria-label="Angle name" />
+          <button type="button" className="se-btn se-btn-small" onClick={saveAngle} data-testid="save-angle">
+            Save view
+          </button>
+        </div>
+        <ul className="se-list">
+          {Object.entries(c.angles).map(([id, a]) => (
+            <li key={id}>
+              <span>{a.label}</span>
+              <button type="button" className="se-link" onClick={() => camera.addKey(false, a, a.label)}>
+                key here
+              </button>
+              <button type="button" className="se-link" onClick={() => camera.addKey(true, a, a.label)}>
+                cut here
+              </button>
+              <button type="button" className="se-link" onClick={() => draft.reset(['camera', 'angles', id])}>
+                remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Section>
+      {c.mode === 'locked' ? (
+        <Section title="Locked pose">
+          <Vec3Field label="Position" step={0.01} {...bind(p('position'), c.position as [number, number, number])} />
+          <Vec3Field label="Target" step={0.01} {...bind(p('target'), c.target as [number, number, number])} />
+          <NumberField label="FOV °" min={5} max={100} step={0.5} slider {...bind(p('fov'), c.fov)} />
+          <NumberField label="Roll °" min={-45} max={45} step={0.5} {...bind(p('roll'), c.roll)} />
+        </Section>
+      ) : null}
+      <Section title="Lens">
+        <SelectField label="Projection" options={[{value: 'perspective', label: 'Perspective'}, {value: 'orthographic', label: 'Orthographic'}]} {...bind<string>(p('projection'), c.projection)} />
+        {c.projection === 'orthographic' ? <NumberField label="Ortho height m" min={0.2} max={40} step={0.05} {...bind(p('orthoHeight'), c.orthoHeight)} /> : null}
+      </Section>
+      {c.mode === 'code' && hasMoves ? (
+        <Section title="Code moves per beat">
+          {timeline.beats
+            .filter((b) => c.moves[b.id])
+            .map((b) => {
+              const m = c.moves[b.id];
+              const mp = (...k: string[]): Path => ['camera', 'moves', b.id, ...k];
+              return (
+                <div className="se-slot" key={b.id}>
+                  <h4>{b.label}</h4>
+                  <ToggleField label="Move" {...bind(mp('enabled'), m.enabled)} />
+                  <Vec3Field label="To position" {...bind(mp('position'), m.position as [number, number, number])} />
+                  <Vec3Field label="To target" {...bind(mp('target'), m.target as [number, number, number])} />
+                  <NumberField label="To FOV °" min={5} max={100} step={0.5} {...bind(mp('fov'), m.fov)} />
+                  <NumberField label="From s" min={0} step={0.05} {...bind(mp('from'), m.from)} />
+                  <NumberField label="Until s" min={0} step={0.05} {...bind(mp('until'), m.until ?? b.durationInFrames / timeline.fps)} />
+                  <SelectField label="Easing" options={easingOptions} {...bind<string>(mp('easing'), m.easing)} />
+                </div>
+              );
+            })}
+        </Section>
+      ) : null}
+      <p className="se-note">Playhead: frame {frame}.</p>
+    </>
+  );
+};
+
+const keyEaseOptions = [{value: 'smooth', label: 'smooth · a path through the neighbouring keys'}, ...easingOptions];
+
+const KeyInspector: React.FC<InspectorProps & {readonly id: string}> = ({state, draft, id, timeline, camera, select}) => {
+  const bind = useBind(draft);
+  const k = state.camera.keys[id];
+  if (!k) return <p className="se-empty">This keyframe no longer exists.</p>;
+  const p = (...x: string[]): Path => ['camera', 'keys', id, ...x];
+  const beatLen = (timeline.beatById.get(k.beat)?.durationInFrames ?? 0) / timeline.fps;
+  const f = keyFrame(timeline, k);
+  return (
+    <>
+      <Head kicker={`Camera ${k.cut ? 'cut' : 'keyframe'} · frame ${f}`} title={k.label || (k.cut ? 'Cut' : 'Keyframe')} id={id}>
+        <div className="se-row">
+          <button type="button" className="se-btn se-btn-small" onClick={() => camera.seek(f)} data-testid="key-goto">
+            Go to key
+          </button>
+          <button
+            type="button"
+            className="se-btn se-btn-small"
+            onClick={() => {
+              const v = camera.currentView();
+              draft.set(['camera', 'keys', id], {...k, position: v.position, target: v.target, fov: v.fov, roll: v.roll});
+            }}
+            title="Free mode: the free camera's view. Otherwise: the shot camera at the playhead."
+          >
+            Set from current view
+          </button>
+          <button
+            type="button"
+            className="se-btn se-btn-small se-danger"
+            onClick={() => {
+              draft.reset(['camera', 'keys', id]);
+              select({kind: 'camera'});
+            }}
+            data-testid="key-delete"
+          >
+            Delete
+          </button>
+        </div>
+      </Head>
+      <Section title="Timing">
+        <TextField label="Name" value={k.label} onChange={(v) => draft.set(p('label'), v)} />
+        <SelectField label="Beat" options={timeline.beats.map((b) => ({value: b.id, label: b.label}))} {...bind<string>(p('beat'), k.beat)} />
+        <NumberField label="At s" min={0} max={beatLen} step={0.05} slider {...bind(p('t'), k.t)} hint="Seconds into the beat's animation." />
+        <ToggleField label="Transition" on="Cut" off="Move" {...bind(p('cut'), k.cut)} testId="key-cut" />
+        {!k.cut ? <SelectField label="Ease in" options={keyEaseOptions} {...bind<string>(p('ease'), k.ease)} /> : null}
       </Section>
       <Section title="Pose">
-        <SelectField label="Projection" options={[{value: 'perspective', label: 'Perspective'}, {value: 'orthographic', label: 'Orthographic'}]} {...bind<string>(p('projection'), c.projection)} />
-        <Vec3Field label="Position" step={0.01} {...bind(p('position'), c.position as [number, number, number])} />
-        <Vec3Field label="Target" step={0.01} {...bind(p('target'), c.target as [number, number, number])} />
-        {c.projection === 'perspective' ? <NumberField label="FOV °" min={5} max={100} step={0.5} slider {...bind(p('fov'), c.fov)} /> : <NumberField label="Ortho height m" min={0.2} max={40} step={0.05} {...bind(p('orthoHeight'), c.orthoHeight)} />}
-        <NumberField label="Roll °" min={-45} max={45} step={0.5} {...bind(p('roll'), c.roll)} />
+        <Vec3Field label="Position" step={0.01} {...bind(p('position'), k.position as [number, number, number])} />
+        <Vec3Field label="Target" step={0.01} {...bind(p('target'), k.target as [number, number, number])} />
+        <NumberField label="FOV °" min={5} max={100} step={0.5} slider {...bind(p('fov'), k.fov)} />
+        <NumberField label="Roll °" min={-45} max={45} step={0.5} {...bind(p('roll'), k.roll)} />
       </Section>
-      <Section title="Moves per beat" aside={<span className="se-note">{c.locked ? 'ignored while locked' : 'active'}</span>}>
-        {Object.keys(c.moves).length === 0 ? <p className="se-empty">No camera moves.</p> : null}
-        {timeline.beats
-          .filter((b) => c.moves[b.id])
-          .map((b) => {
-            const m = c.moves[b.id];
-            const mp = (...k: string[]): Path => ['camera', 'moves', b.id, ...k];
-            return (
-              <div className="se-slot" key={b.id} data-disabled={c.locked ? 'true' : 'false'}>
-                <h4>{b.label}</h4>
-                <ToggleField label="Move" {...bind(mp('enabled'), m.enabled)} />
-                <Vec3Field label="To position" {...bind(mp('position'), m.position as [number, number, number])} />
-                <Vec3Field label="To target" {...bind(mp('target'), m.target as [number, number, number])} />
-                <NumberField label="To FOV °" min={5} max={100} step={0.5} {...bind(mp('fov'), m.fov)} />
-                <NumberField label="From s" min={0} step={0.05} {...bind(mp('from'), m.from)} />
-                <NumberField label="Until s" min={0} step={0.05} {...bind(mp('until'), m.until ?? b.durationInFrames / timeline.fps)} />
-                <SelectField label="Easing" options={easingOptions} {...bind<string>(mp('easing'), m.easing)} />
-              </div>
-            );
-          })}
+    </>
+  );
+};
+
+const NoteInspector: React.FC<InspectorProps & {readonly id: string}> = ({state, draft, id, timeline, camera, select}) => {
+  const n = state.notes[id];
+  if (!n) return <p className="se-empty">This note no longer exists.</p>;
+  const f = keyFrame(timeline, n);
+  return (
+    <>
+      <Head kicker={`Review note · frame ${f} · ${n.beat} +${n.t.toFixed(2)} s`} title={n.done ? 'Resolved note' : 'Note'} id={id}>
+        <p className="se-purpose">Notes are saved with the shot (shot.json) and never rendered. Use them for feedback to address later, by you or by Claude.</p>
+      </Head>
+      <Section title="Note">
+        <textarea className="se-textarea" value={n.text} placeholder="What should change here? e.g. the camera arrives too late; hold on the screen longer" onChange={(e) => draft.set(['notes', id, 'text'], e.target.value)} data-testid="note-text" autoFocus />
+        <div className="se-row">
+          <button type="button" className="se-btn se-btn-small" onClick={() => camera.seek(f)}>
+            Go to note
+          </button>
+          <button type="button" className="se-btn se-btn-small" onClick={() => draft.set(['notes', id, 'done'], !n.done)} data-testid="note-done">
+            {n.done ? 'Reopen' : 'Mark resolved'}
+          </button>
+          <button
+            type="button"
+            className="se-btn se-btn-small se-danger"
+            onClick={() => {
+              draft.reset(['notes', id]);
+              select(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </Section>
     </>
   );

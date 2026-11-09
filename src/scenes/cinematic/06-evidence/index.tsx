@@ -1,9 +1,12 @@
-import {CineGrade, cinematicComposition} from '../../../components/cinematic/episode';
+import {CineGrade} from '../../../components/cinematic/episode';
 import {defineEpisode} from '../../../engine';
+import {applyShotBeats, shotComposition} from '../../../shot';
 import {EvidenceLayer} from './EvidenceLayer';
+import {shot} from './shot';
 import {WorldLayer} from './WorldLayer';
 
-export const episode = defineEpisode({
+/** The beat sheet as written in code (the approved shot.json may retime it). */
+export const baseEpisode = defineEpisode({
   id: 'cine-06-evidence',
   title: 'X06 · Real evidence in a cinematic environment',
   leadIn: 0.3,
@@ -29,4 +32,9 @@ export const episode = defineEpisode({
   ],
 });
 
-export const Sample = cinematicComposition(episode);
+export {shot};
+
+/** The episode with the approved timing (what the gallery, Remotion Root and renders use by default). */
+export const episode = applyShotBeats(baseEpisode, shot.approved);
+
+export const Sample = shotComposition(shot, baseEpisode);

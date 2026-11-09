@@ -21,12 +21,14 @@ type EditorWindow = {
   __shotEditor: {
     id: string;
     patch: Record<string, unknown> & {objects?: Record<string, Record<string, unknown>>; lights?: Record<string, Record<string, unknown>>; camera?: Record<string, unknown>; beats?: Record<string, Record<string, unknown>>};
-    state: {camera: {locked: boolean}; objects: Record<string, {visible: boolean; position: number[]}>};
+    state: {camera: {locked: boolean; mode: string}; objects: Record<string, {visible: boolean; position: number[]}>};
     selection: {kind: string; id?: string} | null;
     set: (path: string[], v: unknown) => void;
     reset: (path: string[]) => void;
     replace: (p: unknown, label?: string) => void;
     select: (s: unknown) => void;
+    seek: (f: number) => void;
+    setView: (v: string) => void;
   };
   __presenter: {
     frame: number;
@@ -63,7 +65,7 @@ const open = async (page: Page, {clean = true} = {}) => {
 
 const editor = (page: Page) => page.evaluate(() => {
   const e = (window as unknown as EditorWindow).__shotEditor;
-  return {patch: JSON.parse(JSON.stringify(e.patch)), selection: e.selection, locked: e.state.camera.locked};
+  return {patch: JSON.parse(JSON.stringify(e.patch)), selection: e.selection, locked: e.state.camera.mode === 'locked', mode: e.state.camera.mode};
 });
 
 /** Let the demand-rendered canvas catch up with a change. */
@@ -245,7 +247,7 @@ test.describe('Shot editor (Style Lab V2)', () => {
     expect(await diff(page, u1, u3)).toBeGreaterThan(0.5); // measured: ~1.9
     // Lock again from the camera inspector.
     await page.getByTestId('node-camera').click();
-    await page.getByTestId('cam-lock-toggle').click();
+    await page.getByTestId('cam-mode-locked').click();
     expect((await editor(page)).locked).toBe(true);
   });
 
@@ -326,5 +328,100 @@ test.describe('Shot editor (Style Lab V2)', () => {
     await page.keyboard.press('ArrowLeft');
     await page.waitForFunction(() => (window as unknown as EditorWindow).__presenter.state.checkpoint === 0, null, {timeout: 30_000});
     await expect(page.getByTestId('strip-frame')).toHaveText('0');
+  });
+  test('timeline: scrub, key, cut, retime a key by dragging, notes', async ({page}) => {
+    await open(page);
+    // Scrub: dragging on the ruler seeks any frame (not only checkpoints).
+    const ruler = page.getByTestId('tl-ruler');
+    const rb = (await ruler.boundingBox())!;
+    await page.mouse.move(rb.x + rb.width * 0.1, rb.y + rb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rb.x + rb.width * 0.45, rb.y + rb.height / 2, {steps: 6});
+    await page.mouse.up();
+    const total = await page.evaluate(() => (window as unknown as EditorWindow).__presenter.timeline.durationInFrames);
+    await expect.poll(() => page.evaluate(() => (window as unknown as EditorWindow).__presenter.frame)).toBeGreaterThan(total * 0.4);
+    // Key at frame 300 from the free camera's view, cut at 520, note at 540 (inside beat 3).
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(300));
+    await settle(page);
+    await page.getByTestId('view-free').click();
+    await page.keyboard.press('k');
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(520));
+    await settle(page);
+    await page.keyboard.press('c');
+    await page.getByTestId('view-shot').click();
+    let {patch, mode} = await editor(page);
+    expect(mode).toBe('keys');
+    const keys = Object.values(patch.camera.keys as Record<string, {beat: string; t: number; cut: boolean; label: string}>);
+    // Opening key (taking over keeps the first frame), the key, the cut.
+    expect(keys).toHaveLength(3);
+    expect(keys.filter((k) => k.cut)).toHaveLength(1);
+    await expect(page.getByTestId('tl-clip-1')).toBeVisible(); // the cut starts a second clip
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(540));
+    await settle(page);
+    await page.getByTestId('tl-note').click();
+    await page.getByTestId('note-text').fill('Hold on the agent screen a beat longer');
+    ({patch} = await editor(page));
+    const notes = Object.values(patch.notes as Record<string, {text: string; beat: string}>);
+    expect(notes).toEqual([expect.objectContaining({text: 'Hold on the agent screen a beat longer', beat: 'jc-agent'})]);
+    // Drag the cut later on the camera track: it moves to a later time.
+    const cutId = Object.entries(patch.camera.keys as Record<string, {cut: boolean}>).find(([, k]) => k.cut)![0];
+    const diamond = page.getByTestId(`tl-key-${cutId}`);
+    const db = (await diamond.boundingBox())!;
+    const lane = (await page.getByTestId('tl-camera').boundingBox())!;
+    await page.mouse.move(db.x + db.width / 2, db.y + db.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(db.x + db.width / 2 + lane.width * 0.12, db.y + db.height / 2, {steps: 8});
+    await page.mouse.up();
+    const moved = (await editor(page)).patch.camera.keys[cutId] as {beat: string; t: number};
+    const before = keys.find((k) => k.cut)!;
+    expect(moved.beat !== before.beat || moved.t > before.t).toBe(true);
+    // Delete removes the selected key.
+    await page.getByTestId(`tl-key-${cutId}`).click();
+    await page.keyboard.press('Delete');
+    expect(Object.keys((await editor(page)).patch.camera.keys)).toHaveLength(2);
+  });
+
+  test('fly: dragging in the viewport moves the shot camera at the playhead', async ({page}) => {
+    await open(page);
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(420));
+    await settle(page);
+    const before = await snap(page, 'fly-before');
+    await page.getByTestId('view-fly').click();
+    const vb = (await viewport(page).boundingBox())!;
+    await page.mouse.move(vb.x + vb.width * 0.5, vb.y + vb.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(vb.x + vb.width * 0.4, vb.y + vb.height * 0.48, {steps: 10});
+    await page.mouse.up();
+    await settle(page);
+    const after = await snap(page, 'fly-after');
+    expect(await diff(page, before, after)).toBeGreaterThan(1);
+    const {patch, mode} = await editor(page);
+    expect(mode).toBe('keys');
+    const flown = Object.values(patch.camera.keys as Record<string, {beat: string; position: number[]}>).find((k) => k.beat === 'jc-agent')!;
+    expect(flown.position).not.toEqual([1.85, 1.62, 2.45]);
+  });
+
+  test('X02: the code camera converts to keyframes that reproduce it', async ({page}) => {
+    watch(page);
+    await page.goto('/style-lab/cine-02-wrong-project/edit');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForFunction(() => {
+      const w = window as unknown as EditorWindow;
+      return w.__presenter?.frame >= 0 && Boolean(w.__shotEditor);
+    }, null, {timeout: 90_000});
+    await expect(page.getByTestId('cam-badge')).toContainText('the scene');
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(560));
+    await settle(page, 1200);
+    const code = await snap(page, 'x02-code-560');
+    await page.getByTestId('node-camera').click();
+    await page.getByTestId('bake').click();
+    await page.waitForFunction(() => (window as unknown as EditorWindow).__shotEditor.state.camera.mode === 'keys', null, {timeout: 120_000});
+    const n = Object.keys((await editor(page)).patch.camera.keys).length;
+    expect(n).toBeGreaterThan(10);
+    await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(560));
+    await settle(page, 1200);
+    const baked = await snap(page, 'x02-baked-560');
+    expect(await diff(page, code, baked)).toBeLessThan(1.5);
   });
 });

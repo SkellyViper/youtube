@@ -9,7 +9,7 @@ import {EpisodeComposition, useEpisodeFrame, useTimeline, type EpisodeDef} from 
 import {ThemeProvider, useTheme} from '../styles/ThemeContext';
 import type {ThemeId} from '../styles/themes';
 import {ShotContext, ShotEditorContext, useShot, type ShotRuntime} from './context';
-import {applyShotBeats, cameraAt, DEFAULT_OBJECT, motionProgress, objectAt, resolveShot} from './resolve';
+import {applyShotBeats, cameraAt, DEFAULT_OBJECT, motionProgress, objectAt, resolveShot, shotCameraAt, type CameraPose} from './resolve';
 import type {EdgeLook, LightState, MaterialLook, ObjectState, ShotDef, ShotPatch, StageState} from './types';
 import '../styles/fonts';
 
@@ -246,16 +246,33 @@ export const useMotion = (id: string): number => {
 
 /* ------------------------------------------------------------------ camera + stage */
 
-/** The shot camera at this frame (fixed when locked), or the editor's inspection camera. */
-export const useShotRig = (): Rig => {
+/**
+ * The shot camera at this frame. `codeRig` is the camera the scene computes
+ * itself (its original choreography); it is used in `code` mode and is
+ * reported to the editor so it can be keyed or baked into the timeline.
+ * Locked: the fixed pose. Keys: the timeline's camera track. In the editor,
+ * the free inspection camera replaces all of these in the viewport only.
+ *
+ * Outside a shot composition (old scenes) it simply returns `codeRig`.
+ */
+export const useShotRig = (codeRig?: Rig): Rig => {
   const shot = useShot();
   const timeline = useTimeline();
   const frame = useEpisodeFrame();
-  if (!shot) throw new Error('[shot] useShotRig() outside a shot composition');
-  if (shot.editor?.inspect) return shot.editor.inspect;
-  const cam = shot.state.camera;
-  const pose = cameraAt(cam, timeline, frame);
-  return {position: pose.position, target: pose.target, fov: pose.fov, roll: cam.roll * DEG, projection: cam.projection, orthoHeight: cam.orthoHeight};
+  const cam = shot?.state.camera;
+  const codePose: CameraPose | null = codeRig ? {position: codeRig.position, target: codeRig.target, fov: codeRig.fov, roll: ((codeRig.roll ?? 0) * 180) / Math.PI} : cam ? {...cameraAt({...cam, locked: false}, timeline, frame), roll: cam.roll} : null;
+  const editor = shot?.editor;
+  const codeKey = codePose ? JSON.stringify(codePose) : '';
+  useEffect(() => {
+    if (editor && codeKey) editor.reportCode(frame, JSON.parse(codeKey));
+  }, [editor, frame, codeKey]);
+  if (!shot || !cam) {
+    if (!codeRig) throw new Error('[shot] useShotRig() needs a shot composition or a code camera');
+    return codeRig;
+  }
+  if (editor?.inspect) return editor.inspect;
+  const pose = shotCameraAt(cam, timeline, frame, codeRig ? codePose : null);
+  return {position: pose.position, target: pose.target, fov: pose.fov, roll: pose.roll * DEG, projection: cam.projection, orthoHeight: cam.orthoHeight};
 };
 
 /** Stage3D props from the stage settings. */

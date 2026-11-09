@@ -12,6 +12,7 @@ import {Comet3D, GlowTube} from '../../../components/cyber/three/Signal3D';
 import {Stage3D} from '../../../components/cyber/three/Stage3D';
 import {clamp01, ease, lerp, seg, smooth} from '../../../components/story/math';
 import {useActiveTime, useBeats, useScalarTrack} from '../../../engine';
+import {useShotRig} from '../../../shot';
 import {useTheme} from '../../../styles/ThemeContext';
 import * as SP from './spread';
 import {Takeover} from './Takeover';
@@ -62,7 +63,8 @@ const IRIS_NEXT = SP.irisAt(SP.NEXT.row, SP.NEXT.i);
 const NEXT_POS = rackAt(SP.NEXT.row, SP.NEXT.i);
 const NEXT_YAW = rackYaw(SP.NEXT.row);
 
-const CAM0: Rig = {position: [-1.72, 1.08, -2.9], target: [IRIS_ORIGIN[0], IRIS_ORIGIN[1] + 0.02, IRIS_ORIGIN[2]], fov: 30};
+/** The opening camera (also the pose the editable shot locks to, see ./shot.ts). */
+export const CAM0: Rig = {position: [-1.72, 1.08, -2.9], target: [IRIS_ORIGIN[0], IRIS_ORIGIN[1] + 0.02, IRIS_ORIGIN[2]], fov: 30};
 const RIG_TRACK = [
   // A slow push on the iris while it flares.
   {beat: 'sw-copy', to: {position: [-1.6, 1.06, -2.74] as Vec3, fov: 28}, from: 0.0, until: 1.0, easing: ease.inOut},
@@ -130,13 +132,16 @@ export const Scene: React.FC = () => {
   const followW = b['sw-copy'].at(0.95, 1.5, ease.inOut) * (1 - b['sw-next'].at(1.35, 2.3, ease.inOut));
   // Aim a little under the pulse once it is high, so the rack top stays in frame and the pulse rides the upper third.
   const lead = 0.04 - 0.32 * smooth(seg(pulse.y, 1.7, 2.45));
-  const rig: Rig = {
+  const codeRig: Rig = {
     position: keyed.position,
     target: lerp3(keyed.target, [pulse.x, pulse.y + lead, pulse.z], followW),
     fov: keyed.fov,
   };
+  // The shot camera: this choreography, unless the shot config locks it or keys a camera track (./shot.ts).
+  const rig = useShotRig(codeRig);
 
   // ---- the roof: fades as the camera reaches it; the campus comes up as the camera leaves ----------------------
+  // From the directed camera, so a locked or keyed shot camera still clears the roof when it rises through it.
   const camY = rig.position[1];
   const ceiling = 1 - smooth(seg(camY, 3.05, 3.36));
   const reveal = smooth(seg(camY, 3.1, 5.5));

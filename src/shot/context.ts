@@ -11,7 +11,9 @@ export type Selection =
   | {readonly kind: 'camera'}
   | {readonly kind: 'stage'}
   | {readonly kind: 'beat'; readonly id: string}
-  | {readonly kind: 'motion'; readonly id: string};
+  | {readonly kind: 'motion'; readonly id: string}
+  | {readonly kind: 'key'; readonly id: string}
+  | {readonly kind: 'note'; readonly id: string};
 
 /**
  * The editor's handle inside the composition. It only exists while a shot is
@@ -23,10 +25,14 @@ export type ShotEditorApi = {
   select(sel: Selection | null): void;
   /** Free inspection camera. When set it replaces the shot camera in the editor viewport only. */
   readonly inspect: Rig | null;
-  /** Draw helpers (selection box, light markers, shot camera frustum). */
+  /** Draw helpers (selection box, light markers, shot camera frustum and path). */
   readonly helpers: boolean;
+  /** The shot camera's pose at the current frame (for the frustum helper while inspecting). */
+  readonly shotPose: {position: readonly number[]; target: readonly number[]; fov: number} | null;
   /** Effective material values, reported by `useLook` so the inspector shows real numbers. */
   report(objectId: string, slot: string, look: Required<MaterialLook>): void;
+  /** The scene's own (code) camera at a frame, reported by `useShotRig` (for "key from code camera" and baking). */
+  reportCode(frame: number, pose: {position: readonly number[]; target: readonly number[]; fov: number; roll: number}): void;
 };
 
 export const ShotEditorContext = createContext<ShotEditorApi | null>(null);

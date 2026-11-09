@@ -10,6 +10,7 @@ import {cineMaterials, litMix} from '../../../components/cinematic/three/materia
 import {HALL, rackAt, rackYaw} from '../../../components/cinematic/world';
 import {clamp01, ease, lerp, seg, smooth} from '../../../components/story/math';
 import {useActiveTime, useBeats} from '../../../engine';
+import {useShotRig} from '../../../shot';
 import {useTheme} from '../../../styles/ThemeContext';
 
 /**
@@ -84,7 +85,8 @@ const LOOK_AHEAD = 0.4;
 
 const sweepTarget = (sx: number): Vec3 => [sx + LOOK_AHEAD, 1.75, AISLE_Z - 0.35];
 
-const CAM0: Rig = {position: [-6.3, 1.5, AISLE_Z], target: [-2.0, 1.7, AISLE_Z], fov: 46};
+/** The opening camera (also the pose the editable shot locks to, see ./shot.ts). */
+export const CAM0: Rig = {position: [-6.3, 1.5, AISLE_Z], target: [-2.0, 1.7, AISLE_Z], fov: 46};
 const RIG_TRACK = [{beat: 'bs-zone', to: {position: [DOLLY_FROM, CAM_Y, CAM_Z] as Vec3, target: sweepTarget(SCAN_FROM), fov: 44}, from: 0.0, until: 2.6}];
 const FINAL: Rig = {position: [6.0, 3.0, 0.0], target: [2.8, 0.85, -5.3], fov: 44};
 /** Seconds before the end of bs-clear at which the crane starts to rise. */
@@ -277,11 +279,13 @@ export const Scene: React.FC = () => {
   const craneTime = seg(b['bs-clear'].time, b['bs-clear'].duration - CRANE_LEAD, b['bs-clear'].duration) * CRANE_LEAD + b['bs-outside'].time;
   const u = ease.camera(clamp01(craneTime / craneSeconds));
   // Rise first (clear of the fence top and the parked trolley), then drift out into the corridor.
-  const rig: Rig = {
+  const codeRig: Rig = {
     position: [lerp(base.position[0], FINAL.position[0], u), lerp(base.position[1], FINAL.position[1], smooth(u / 0.4)), lerp(base.position[2], FINAL.position[2], smooth((u - 0.35) / 0.65))],
     target: [lerp(base.target[0], FINAL.target[0], u), lerp(base.target[1], FINAL.target[1], u), lerp(base.target[2], FINAL.target[2], u)],
     fov: lerp(base.fov, FINAL.fov, u),
   };
+  // The shot camera: this choreography, unless the shot config locks it or keys a camera track (./shot.ts).
+  const rig = useShotRig(codeRig);
 
   // ---- the closet machine ---------------------------------------------------------
   const energy = 0.9 + 0.3 * b['bs-outside'].at(1.6, 3.0, ease.out);

@@ -104,6 +104,57 @@ export type CameraMove = {
 
 export type Projection = 'perspective' | 'orthographic';
 
+/** How a camera keyframe is reached from the previous one. */
+export type CameraEase = EasingName | 'smooth';
+
+/**
+ * A camera keyframe on the shot's timeline (the video-editor camera track).
+ *
+ * Time is (beat, seconds into that beat's animation), not an absolute frame:
+ * keys survive beat retiming, and the camera never moves during a hold, so
+ * the presenter can rest on any checkpoint. Between two keys the camera
+ * blends with the later key's `ease` (`smooth` = a Catmull-Rom path through
+ * the neighbouring keys, constant pace). A key with `cut` is a hard cut: the
+ * previous pose holds until the key's time, then the shot changes.
+ */
+export type CameraKey = {
+  readonly beat: string;
+  readonly t: number;
+  readonly position: Vec3;
+  readonly target: Vec3;
+  readonly fov: number;
+  /** Degrees. */
+  readonly roll: number;
+  readonly ease: CameraEase;
+  readonly cut: boolean;
+  /** Name shown on the timeline ("Wide", "Over the shoulder"). */
+  readonly label: string;
+};
+
+/** A saved camera angle (the angle bin): drop it on the timeline as a key or a cut. */
+export type CameraAngle = {
+  readonly label: string;
+  readonly position: Vec3;
+  readonly target: Vec3;
+  readonly fov: number;
+  readonly roll: number;
+};
+
+/**
+ * locked  one fixed pose for the whole shot
+ * keys    the keyframe track (cuts and moves edited on the timeline)
+ * code    the camera the scene's code computes (its original choreography)
+ */
+export type CameraMode = 'locked' | 'keys' | 'code';
+
+/** A timestamped review note on the timeline ("camera too fast here"). Never rendered. */
+export type ShotNote = {
+  readonly beat: string;
+  readonly t: number;
+  readonly text: string;
+  readonly done: boolean;
+};
+
 export type CameraState = {
   /**
    * Locked (the default for new shots): the camera stays exactly at
@@ -121,6 +172,10 @@ export type CameraState = {
   /** Degrees. */
   readonly roll: number;
   readonly moves: Readonly<Record<string, CameraMove>>;
+  /** Effective mode (derived: an explicit `mode`, else `locked`, else keys if any, else code). */
+  readonly mode: CameraMode;
+  readonly keys: Readonly<Record<string, CameraKey>>;
+  readonly angles: Readonly<Record<string, CameraAngle>>;
 };
 
 export type BloomState = {readonly enabled: boolean; readonly strength: number; readonly radius: number; readonly threshold: number};
@@ -184,6 +239,7 @@ export type ShotState = {
   readonly stage: StageState;
   readonly beats: Readonly<Record<string, BeatState>>;
   readonly motions: Readonly<Record<string, MotionState>>;
+  readonly notes: Readonly<Record<string, ShotNote>>;
 };
 
 /* ------------------------------------------------------------------ patch */
@@ -208,6 +264,9 @@ export type CameraPatch = {
   orthoHeight?: number;
   roll?: number;
   moves?: Record<string, Partial<CameraMove>>;
+  mode?: CameraMode;
+  keys?: Record<string, CameraKey>;
+  angles?: Record<string, CameraAngle>;
 };
 
 export type StagePatch = {
@@ -233,6 +292,7 @@ export type ShotPatch = {
   stage?: StagePatch;
   beats?: Record<string, Partial<BeatState>>;
   motions?: Record<string, Partial<MotionState>>;
+  notes?: Record<string, ShotNote>;
 };
 
 /* ------------------------------------------------------------------ definition */
@@ -271,7 +331,13 @@ export type ShotDef = {
   readonly title: string;
   readonly objects: Readonly<Record<string, ObjectDef>>;
   readonly lights: Readonly<Record<string, LightDef>>;
-  readonly camera: Partial<Omit<CameraState, 'moves'>> & {readonly moves?: Readonly<Record<string, Partial<CameraMove>>>};
+  readonly camera: Partial<Omit<CameraState, 'moves' | 'mode' | 'keys' | 'angles'>> & {
+    readonly moves?: Readonly<Record<string, Partial<CameraMove>>>;
+    /** Default mode when the patch does not choose one ('code' for scenes with authored cameras). */
+    readonly mode?: CameraMode;
+    /** Starter angles for the angle bin. */
+    readonly angles?: Readonly<Record<string, CameraAngle>>;
+  };
   readonly stage?: Partial<Omit<StageState, 'bloom'>> & {readonly bloom?: Partial<BloomState>};
   readonly motions?: Readonly<Record<string, MotionDef>>;
   /** The approved patch, imported from the scene's `shot.json`. */

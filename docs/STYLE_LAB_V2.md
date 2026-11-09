@@ -100,7 +100,7 @@ Neither is final character art. The figure is still built from capsules and sphe
 
 ## 6. The shot editor
 
-Open it from the gallery (**Edit shot** on an editable tile) or from the viewer (**Edit shot** in the top bar), or go to `/style-lab/<slug>/edit`. Today only `cine-01-john` is editable.
+Open it from the gallery (**Edit shot** on an editable tile) or from the viewer (**Edit shot** in the top bar), or go to `/style-lab/<slug>/edit`. All six 3D scenes open in it: X01 with objects, lights, look and camera; X02–X06 with their camera and timing (their objects stay code until they are redesigned). The editor supports the direction; it is not the goal. The look itself comes from the Legacy Experiments (see [`docs/style-lab-v2/LEGACY_REFERENCE.md`](style-lab-v2/LEGACY_REFERENCE.md)).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
@@ -122,8 +122,8 @@ Open it from the gallery (**Edit shot** on an editable tile) or from the viewer 
 | --- | --- |
 | **Hierarchy** | Objects by group, lights (rig / environment / practical), the camera (lock icon) and the stage look. The eye hides/shows an object, the bulb switches a light, the lock locks the camera. An amber dot marks anything the draft changes. |
 | **Viewport** | The actual composition in a Remotion Player, with the same presenter keys as everywhere: → next beat, ← previous checkpoint, R replay, F fullscreen, H HUD, Space play. Click an object to select it. Helpers (selection box, light markers) only exist in the editor. |
-| **Free camera** (`I`) | Orbit (drag), pan (right-drag or Shift-drag), zoom (wheel) to inspect geometry. Does not affect the shot or the render. |
-| **Beat strip** | Beats to scale, export holds hatched, cues as bars at their start/end, "camera moves" where a beat moves the camera, the playhead. Click a beat or a cue to inspect it; double-click a beat to jump to its checkpoint. |
+| **View: Shot / Fly / Free** | *Shot* looks through the shot camera (what renders). *Fly* looks through it and lets you drag it: orbit (drag), pan (right-drag or Shift-drag), dolly (wheel), lens (Alt+wheel); the drag edits the camera keyframe at the playhead, creating one if needed. *Free* (`I`) is an inspection camera that never changes the shot; it shows the shot camera's frustum and its keyed path, and K / C key the shot camera to the view you found. |
+| **Timeline** | Laid out like a video editor: a ruler (drag anywhere to scrub to any frame), the beats (hatched = export-only hold), the **camera track** (clips are shots, a cut starts a new clip; diamonds are keyframes, red = cut; drag to retime, click to select, double-click to jump), the cues, and **review notes** (flags). Play/pause, timecode, zoom. |
 | **Inspector** | Object: visibility, opacity, model variant, position / rotation / scale around the pivot, material slots (colour, emissive, emissive ×, roughness, metalness), luminous edges, transform motions. Light: on/off, intensity, colour, ground colour, position, target, shadows, cone, range. Camera: lock, projection, position, target, fov / ortho height, roll, per-beat moves. Stage: presets, bloom, exposure, fog, background, shadows, grade. Beat: start / checkpoint / end frames, duration, export hold, cues and motions inside it. Motion: beat, start / end offsets, easing, enabled, and for transform motions the target position / rotation / scale / opacity / visibility. With nothing selected: every change the draft makes, each with its own reset. |
 | **Fields** | Type a value, arrow keys (Shift ×10, Alt ÷10), or drag the label to scrub. ↺ resets that one property to its code value. |
 | **Undo / Redo** | Ctrl+Z / Ctrl+Shift+Z (Ctrl+Y). Rapid changes to one field coalesce into one step. |
@@ -227,12 +227,29 @@ Limits (deliberate for a first version):
 8. **Camera and stage**: `const rig = useShotRig(); const stage = useShotStage();` and pass them to `<Stage3D>`. Render `<ShotLights />` inside the stage.
 9. **Composition**: in `index.tsx`, `export const Sample = shotComposition(shot, baseEpisode)`, `export const episode = applyShotBeats(baseEpisode, shot.approved)`, and export `shot` and `baseEpisode`. Use `ShotGrade` as the grade layer. The registry (`src/videos/style-lab/cinematic.ts`) picks up `shot`/`baseEpisode` and the gallery shows **Edit shot**.
 
-### Locking the camera
+### Directing the camera (the timeline)
 
-- In the editor: the lock in the hierarchy, or Camera → Lock. Locked is the default for new shots (`DEFAULT_CAMERA.locked = true`).
-- In code: omit `locked` (default true) or set `camera: {locked: true, position, target, fov}` in `defineShot`.
-- To frame a shot: **Free camera**, find the view, **Use inspection view as shot camera**, then fine-tune the numbers.
-- When a move is genuinely needed: unlock, then edit that beat's move (Camera → Moves per beat). The beat strip shows "camera moves" on that beat so it is never an accident.
+The camera has three modes (Camera in the hierarchy):
+
+| Mode | What renders |
+| --- | --- |
+| **Code** | The camera the scene was written with. X02–X06 open in this mode, so they look exactly as before. |
+| **Locked** | One fixed pose for the whole shot (the default for new shots). |
+| **Keyframes** | The camera track you edit on the timeline. |
+
+Working loop:
+
+1. Scrub to a moment (drag on the ruler, `,` / `.` step a frame, Shift ×10, → / ← jump beats).
+2. Find the view: **Fly** to nudge the shot camera directly, or **Free** to look around and frame it.
+3. Press **K** for a keyframe (the camera moves into it from the previous key, with that key's ease) or **C** for a cut (the previous shot holds, then the picture changes). Taking over from Code or Locked also keys the shot's opening pose at the start, so nothing before your first key changes.
+4. Drag diamonds to retime; select one to rename it ("Wide", "Over the shoulder"), switch move ↔ cut, change the ease (`smooth` follows a path through the neighbouring keys; the other presets accelerate and settle), or type exact numbers.
+5. **N** pins a review note at the playhead. Notes are saved in `shot.json`, listed when nothing is selected, can be marked resolved, and never render. Use them for feedback to act on later (they are plain JSON, so Claude can read and address them).
+6. **Angle bin** (Camera inspector): save the current view under a name, then "key here" / "cut here" from it anywhere on the timeline.
+7. **Convert the code camera to keyframes** (Camera → Code): steps through the scene, samples its own camera and turns it into editable keys (X02's fly-through becomes about 60 keys that reproduce it to within 0.3/255 at the checked frame). Then simplify: delete keys, add cuts, hold where it should hold.
+
+Keys and notes are anchored to (beat, seconds into the beat), never to raw frames. A key dragged into a hold snaps to the end of that beat, so the camera never moves while the presenter waits for →, and retiming a beat carries its keys with it.
+
+Locking still works as before: the lock icon in the hierarchy, Camera → Locked, or `camera: {mode: 'locked'}` in code.
 
 ### Rendering modified scenes
 
@@ -250,15 +267,15 @@ The `shot` prop reaches `calculateMetadata`, so a retimed draft renders at its o
 
 ## 7. What the editor can change, what still needs code, what is deferred
 
-**Without code:** hide/show any declared object; move, rotate, scale it around its pivot; fade it; switch its model variant; recolour any declared material slot (colour, emissive, emissive strength, roughness, metalness); add or tune luminous edges; switch, tint, dim, aim and place every light, toggle shadows; apply a lighting preset; lock/unlock the camera, set its pose, projection (perspective / orthographic), fov, roll, and its per-beat moves; set bloom, exposure, fog, background, shadows, grade; retime beats and export holds; retime, re-ease, move or disable cues; add transform motions to objects; save, export, import, undo, redo; render the result.
+**Without code:** direct the camera on a timeline (keyframes, cuts, eases, drag to retime, fly the camera, an angle bin, convert a scene's own camera to keys) in all six 3D scenes; pin review notes to moments; hide/show any declared object; move, rotate, scale it around its pivot; fade it; switch its model variant; recolour any declared material slot (colour, emissive, emissive strength, roughness, metalness); add or tune luminous edges; switch, tint, dim, aim and place every light, toggle shadows; apply a lighting preset; lock/unlock the camera, set its pose, projection (perspective / orthographic), fov, roll, and its per-beat moves; set bloom, exposure, fog, background, shadows, grade; retime beats and export holds; retime, re-ease, move or disable cues; add transform motions to objects; save, export, import, undo, redo; render the result.
 
-**Still code:** new objects and new geometry or models; new material slots or variants; what a cue does; beat list and order; screen contents (what the game and the chat paint); camera paths with more than one key per beat; anything a component computes from the frame (typing, the hologram, the screens).
+**Still code:** in X02–X06 everything except the camera and beat timing (their objects, lights and look are not exposed yet), and effects timed to their original camera moves (X02's building shell opening, X03's fade, X04's roof fade, which follows the camera height); new objects and new geometry or models; new material slots or variants; what a cue does; beat list and order; screen contents (what the game and the chat paint); camera paths with more than one key per beat; anything a component computes from the frame (typing, the hologram, the screens).
 
 **Deferred:**
 
 - Transform gizmos in the viewport (drag handles). Numbers, scrubbing and the free camera cover it for now; `@react-three/drei` `TransformControls` would be the route.
 - Adding objects from a library / swapping in GLB models from the editor. The `variant` field is the hook; a `model` variant that loads a GLB through `useGLTF` (ThreeCanvas already waits on Suspense) is straightforward once an approved asset exists.
-- Editing beats' structure, multi-key camera paths, curve editors.
+- Editing beats' structure, curve editors for eases, simplifying a baked camera automatically (delete keys by hand for now).
 - Editing more scenes: only X01 is converted. Converting the others is part of their redesign.
 - A server-side save in `vite preview` / production builds (only the dev server writes files, by design).
 

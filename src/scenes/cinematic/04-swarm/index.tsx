@@ -1,8 +1,11 @@
-import {CineGrade, cinematicComposition} from '../../../components/cinematic/episode';
+import {CineGrade} from '../../../components/cinematic/episode';
 import {defineEpisode} from '../../../engine';
+import {applyShotBeats, shotComposition} from '../../../shot';
 import {Scene} from './Scene';
+import {shot} from './shot';
 
-export const episode = defineEpisode({
+/** The beat sheet as written in code (the approved shot.json may retime it). */
+export const baseEpisode = defineEpisode({
   id: 'cine-04-swarm',
   title: 'X04 · One agent becomes a swarm',
   leadIn: 0.3,
@@ -27,4 +30,9 @@ export const episode = defineEpisode({
   ],
 });
 
-export const Sample = cinematicComposition(episode);
+export {shot};
+
+/** The episode with the approved timing (what the gallery, Remotion Root and renders use by default). */
+export const episode = applyShotBeats(baseEpisode, shot.approved);
+
+export const Sample = shotComposition(shot, baseEpisode);

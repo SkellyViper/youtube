@@ -119,10 +119,16 @@ const LEAF: Readonly<Record<string, (v: unknown) => boolean>> = {
   label: (v) => typeof v === 'string',
   beat: (v) => typeof v === 'string',
   object: (v) => typeof v === 'string',
+  t: (v) => isNum(v) && v >= 0,
+  ease: (v) => v === 'smooth' || isEasing(v),
+  cut: (v) => typeof v === 'boolean',
+  mode: (v) => v === 'locked' || v === 'keys' || v === 'code',
+  text: (v) => typeof v === 'string',
+  done: (v) => typeof v === 'boolean',
 };
 
 /** Sections whose children are free-form maps of id -> record. */
-const MAPS = new Set(['objects', 'lights', 'beats', 'motions', 'materials', 'moves']);
+const MAPS = new Set(['objects', 'lights', 'beats', 'motions', 'materials', 'moves', 'keys', 'angles', 'notes']);
 /** Nested records (not maps) allowed inside a record. */
 const RECORDS = new Set(['edges', 'bloom', 'to', 'camera', 'stage']);
 
@@ -168,7 +174,7 @@ export const sanitizePatch = (def: ShotDef, raw: unknown): {patch: ShotPatch; pr
   if (typeof raw.shot === 'string' && raw.shot !== def.id) problems.push(`file is for shot "${raw.shot}", not "${def.id}"`);
   const out: ShotPatch = {version: 1, shot: def.id};
   if (typeof raw.note === 'string') out.note = raw.note;
-  for (const section of ['objects', 'lights', 'camera', 'stage', 'beats', 'motions'] as const) {
+  for (const section of ['objects', 'lights', 'camera', 'stage', 'beats', 'motions', 'notes'] as const) {
     if (raw[section] === undefined) continue;
     const c = clean(raw[section], section, problems, section);
     if (isObj(c) && Object.keys(c).length) (out as Obj)[section] = c;

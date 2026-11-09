@@ -1,27 +1,27 @@
 import {useThree, type ThreeEvent} from '@react-three/fiber';
 import React, {useLayoutEffect, useMemo} from 'react';
 import * as THREE from 'three';
-import {useEpisodeFrame, useTimeline} from '../engine/context';
+import {useTimeline} from '../engine/context';
 import {useShot} from './context';
-import {cameraAt} from './resolve';
+import {keyFrame, keysPoseAt, sortedKeys} from './resolve';
 
 /**
  * Editor-only helpers drawn inside the 3D canvas: a box around the selected
- * object, a marker per positioned light (click to select it), and, while
- * the free inspection camera is active, the shot camera's frustum. Stage3D
- * mounts this only when an editor is attached, so it can never reach a render.
+ * object, a marker per positioned light (click to select it) and, while the
+ * free inspection camera is active, the shot camera's frustum and the keyed
+ * camera path with its keyframes (click one to select it). Stage3D mounts
+ * this only when an editor is attached, so it can never reach a render.
  */
 export const ShotEditorOverlay: React.FC = () => {
   const shot = useShot();
   const scene = useThree((s) => s.scene);
   const size = useThree((s) => s.size);
   const timeline = useTimeline();
-  const frame = useEpisodeFrame();
   const editor = shot?.editor;
 
   const box = useMemo(() => new THREE.Box3Helper(new THREE.Box3(), new THREE.Color('#FFD166')), []);
-  const lightCam = useMemo(() => new THREE.PerspectiveCamera(34, 16 / 9, 0.3, 4), []);
-  const camHelper = useMemo(() => new THREE.CameraHelper(lightCam), [lightCam]);
+  const shotCam = useMemo(() => new THREE.PerspectiveCamera(34, 16 / 9, 0.3, 4), []);
+  const camHelper = useMemo(() => new THREE.CameraHelper(shotCam), [shotCam]);
   useLayoutEffect(() => {
     for (const h of [box, camHelper]) {
       h.renderOrder = 999;
@@ -44,28 +44,68 @@ export const ShotEditorOverlay: React.FC = () => {
   });
 
   // Shot camera frustum, shown only while inspecting with the free camera.
-  const cam = shot?.state.camera;
-  const pose = cam ? cameraAt(cam, timeline, frame) : null;
+  const pose = editor?.shotPose ?? null;
   useLayoutEffect(() => {
     camHelper.visible = Boolean(editor?.inspect && pose);
     if (!pose) return;
-    lightCam.fov = pose.fov;
-    lightCam.aspect = size.width / size.height;
-    lightCam.far = 2.2;
-    lightCam.position.set(...(pose.position as [number, number, number]));
-    lightCam.lookAt(...(pose.target as [number, number, number]));
-    lightCam.updateProjectionMatrix();
-    lightCam.updateMatrixWorld();
+    shotCam.fov = pose.fov;
+    shotCam.aspect = size.width / size.height;
+    shotCam.far = 1.6;
+    shotCam.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    shotCam.lookAt(pose.target[0], pose.target[1], pose.target[2]);
+    shotCam.updateProjectionMatrix();
+    shotCam.updateMatrixWorld();
     camHelper.update();
   });
 
+  // The keyed camera path: sampled every 4 frames over the animation.
+  const cam = shot?.state.camera;
+  const path = useMemo(() => {
+    if (!cam || cam.mode !== 'keys' || Object.keys(cam.keys).length < 2) return null;
+    const pts: THREE.Vector3[] = [];
+    for (const b of timeline.beats) {
+      for (let f = b.start; f <= b.animEnd; f += 4) {
+        const p = keysPoseAt(cam, timeline, f);
+        if (p) pts.push(new THREE.Vector3(p.position[0], p.position[1], p.position[2]));
+      }
+    }
+    return new THREE.BufferGeometry().setFromPoints(pts);
+  }, [cam, timeline]);
+
   if (!shot || !editor) return null;
   const lights = Object.entries(shot.state.lights).filter(([, l]) => l.kind === 'directional' || l.kind === 'point' || l.kind === 'spot');
+  const keys = cam && cam.mode === 'keys' ? sortedKeys(cam, timeline) : [];
 
   return (
     <group name="__editor">
       <primitive object={box} />
       <primitive object={camHelper} />
+      {editor.inspect && path ? (
+        <line>
+          <primitive object={path} attach="geometry" />
+          <lineBasicMaterial color="#FFC35C" depthTest={false} transparent opacity={0.85} toneMapped={false} />
+        </line>
+      ) : null}
+      {editor.inspect
+        ? keys.map(([id, k]) => {
+            const active = sel?.kind === 'key' && sel.id === id;
+            return (
+              <mesh
+                key={id}
+                position={[k.position[0], k.position[1], k.position[2]]}
+                renderOrder={1001}
+                onClick={(e: ThreeEvent<MouseEvent>) => {
+                  e.stopPropagation();
+                  editor.select({kind: 'key', id});
+                }}
+                userData={{frame: keyFrame(timeline, k)}}
+              >
+                <octahedronGeometry args={[active ? 0.07 : 0.045, 0]} />
+                <meshBasicMaterial color={k.cut ? '#FF5A68' : '#FFC35C'} depthTest={false} transparent toneMapped={false} />
+              </mesh>
+            );
+          })
+        : null}
       {lights.map(([id, l]) => {
         const active = sel?.kind === 'light' && sel.id === id;
         const on = l.enabled && l.intensity > 0;

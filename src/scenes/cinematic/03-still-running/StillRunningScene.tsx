@@ -15,6 +15,7 @@ import {CHAT_MONITOR, GAME_MONITOR, HALL_TO_WORLD} from '../../../components/cin
 import {createRandom} from '../../../components/random';
 import {ease, lerp, smooth} from '../../../components/story/math';
 import {useActiveTime, useBeats, useScalarTrack} from '../../../engine';
+import {useShotRig} from '../../../shot';
 import {useTheme} from '../../../styles/ThemeContext';
 
 /**
@@ -83,7 +84,7 @@ const LOG_LINES: TerminalScreenState['lines'] = (() => {
 /* ------------------------------------------------------------------ camera */
 
 /** Over John's left shoulder: the agent monitor centre-right, the game monitor and the window left, his head a dark mass at right. */
-const CAM0: Rig = {position: [-1.15, 1.58, 2.0], target: [0.2, 1.05, -0.2], fov: 34};
+export const CAM0: Rig = {position: [-1.15, 1.58, 2.0], target: [0.2, 1.05, -0.2], fov: 34};
 const CAM1: Rig = {position: [-1.0, 1.5, 1.75], target: [0.2, 1.05, -0.2], fov: 33};
 const RIG_TRACK = [{beat: 'sr-close', to: CAM1, from: 0.0, until: 3.0}];
 
@@ -188,11 +189,13 @@ export const StillRunningScene: React.FC = () => {
   const push = b['sr-reveal'].at(0.2, 2.5, ease.camera);
   const revealPos = hallToWorld([-2.35, 1.42, -2.8]);
   const revealTarget = hallToWorld([-0.82, 0.95, -1.88]);
-  const rig: Rig = {
+  const codeRig: Rig = {
     position: [lerp(pathRig.position[0], revealPos[0], push), lerp(pathRig.position[1], revealPos[1], push), lerp(pathRig.position[2], revealPos[2], push)],
     target: [lerp(pathRig.target[0], revealTarget[0], push), lerp(pathRig.target[1], revealTarget[1], push), lerp(pathRig.target[2], revealTarget[2], push)],
     fov: lerp(pathRig.fov, 38, push),
   };
+  // The shot camera: this choreography, unless the shot config locks it or keys a camera track (./shot.ts).
+  const rig = useShotRig(codeRig);
 
   // ---- the hall --------------------------------------------------------------------------
   const inside = b['sr-arrive'].at(0.25, 1.25, ease.inOut); // the building's shell fades as the camera reaches it
