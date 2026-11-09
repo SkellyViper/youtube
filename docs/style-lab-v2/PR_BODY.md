@@ -22,11 +22,16 @@ Stacked on `cinematic-3d-experiments` (its PR is not opened yet). Open that one 
 - `scripts/cine.mjs`: `--shot=<file>` and `--code-defaults`.
 - Tests: `tests/shot-editor.spec.ts`.
 
+## Follow-up in this branch: direct the camera like an editor, and the legacy reference
+
+- **Camera timeline** in the editor for all six 3D scenes: scrub any frame, keyframes (moves with eases or a smooth path) and cuts on a camera track, drag to retime, Fly (drag the shot camera at the playhead) and Free (inspect, then key the shot to that view), an angle bin, review notes pinned to moments (saved in `shot.json`, never rendered), and "convert the code camera to keyframes". Keys are anchored to beats, so holds stay frozen. X02–X06 are camera-editable; their default output is bit-identical.
+- **`docs/style-lab-v2/LEGACY_REFERENCE.md`**: the ten original Legacy Experiments rendered and inspected frame by frame (98 frames), nine principles with numbers (cast size, void share, colour shares, camera metres per sample), honest per-sample notes, staging rules for the six story moments in the legacy idiom, and a checklist. This is the creative reference from now on; the editor only supports it.
+
 ## Verification
 
 - `npm run typecheck`: clean.
 - `tests/shot-editor.spec.ts`: 9/9 in a real GPU Chromium. Pixel differences are measured in the page, not assumed: a transform edit changes the viewport, undo and reset return it to the same pixels; hiding the desk, a red rim light and a preset all change it; with the camera locked the upper band of the frame is **pixel-identical** at the checkpoints of beats 1 and 3 (mean difference 0.000), unlocked it moves (1.9); retiming `jc-game` 2.8 → 4 s adds exactly 72 frames to the presenter timeline; a draft survives a reload; export → code defaults → import restores it; → / ← work inside the editor.
-- Full suite (`npm test`): 81 passed (9.4 min): the 72 existing tests (timeline, presenter, Style Lab, story, cinematic: all six experiments walked beat by beat) plus the 9 editor tests. `vite build` passes.
+- Full suite (`npm test`): 84 passed (14.9 min) after the camera-timeline follow-up: the 72 existing tests (timeline, presenter, Style Lab, story, cinematic: all six experiments walked beat by beat) plus 12 editor tests (now including timeline scrub / key / cut / drag / notes, Fly, and X02 camera baking). `vite build` passes.
 - Renders (1920×1080, 60 fps, H.264, each checked by `verify-video`): approved X01 852 frames PASS; one-property draft (`docs/style-lab-v2/examples/x01-hide-agent-monitor.shot.json`) 852 frames PASS; code defaults 900 frames PASS (the original timing).
 - The one-property draft differs from the approved render only where it should: at frame 558, 9.5 % of pixels changed, nothing outside x 472–1573, y 256–1079; inside that box the amplified difference image shows the monitor itself and the violet light it threw on John, the desk and the chair. The sky and horizon line are untouched. `python scripts/dev/frame-diff.py` reproduces this.
 - Camera in the MP4s: across the four checkpoints the top band of the approved render differs by 0.37/255 (film grain only) and the whole frame by 1.0–1.6 (the action); in the code-default render the same band differs by 5.7–14.3 and the frame by 9.7–29.4.
