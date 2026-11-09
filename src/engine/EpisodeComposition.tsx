@@ -61,7 +61,9 @@ export const EpisodeComposition: React.FC<{readonly episode: EpisodeDef}> = ({ep
     <AbsoluteFill style={{backgroundColor: episode.background ?? '#000', overflow: 'hidden'}}>
       <TimelineContext.Provider value={timeline}>
         {items.map(({key, name, start, end, Component}) => (
-          <Sequence key={key} name={name} from={start} durationInFrames={end - start}>
+          // Layers never take pointer events (a grade layer on top would swallow every click);
+          // the 3D canvas opts back in, so the shot editor can pick objects in the viewport.
+          <Sequence key={key} name={name} from={start} durationInFrames={end - start} style={{pointerEvents: 'none'}}>
             <MountOffsetContext.Provider value={start}>
               <Component />
             </MountOffsetContext.Provider>

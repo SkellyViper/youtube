@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "shot": "cine-01-john",
+  "note": "Style Lab V2 proof of concept: the legacy stage (void, horizon line, obsidian floor), only the objects that explain the moment, the Legacy neon light rig, a locked three-quarter camera, a shorter first beat.",
+  "beats": {
+    "jc-room": {
+      "duration": 2.2
+    }
+  },
+  "camera": {
+    "fov": 32,
+    "locked": true,
+    "position": [1.85, 1.62, 2.45],
+    "target": [-0.08, 0.92, -0.12]
+  },
+  "lights": {
+    "ambient": {
+      "enabled": true,
+      "intensity": 0.32
+    },
+    "fill": {
+      "enabled": true,
+      "intensity": 0.25
+    },
+    "key": {
+      "castShadow": true,
+      "enabled": true,
+      "intensity": 0.9
+    },
+    "rim": {
+      "enabled": true,
+      "intensity": 2
+    },
+    "room-bounce": {
+      "enabled": false
+    },
+    "sky": {
+      "enabled": true,
+      "intensity": 0.35
+    },
+    "window-light": {
+      "enabled": false
+    }
+  },
+  "objects": {
+    "bookshelf": {
+      "visible": false
+    },
+    "cables": {
+      "visible": false
+    },
+    "ceiling": {
+      "visible": false
+    },
+    "chair": {
+      "edges": {
+        "color": "#2E9BFF",
+        "enabled": true,
+        "intensity": 0.7
+      },
+      "materials": {
+        "base": {
+          "color": "#0A0D18",
+          "metalness": 0.6,
+          "roughness": 0.4
+        },
+        "shell": {
+          "color": "#090C16",
+          "roughness": 0.7
+        }
+      },
+      "position": [0, 0, 0.76]
+    },
+    "city": {
+      "visible": false
+    },
+    "desk": {
+      "edges": {
+        "color": "#2E9BFF",
+        "enabled": true,
+        "intensity": 1.3
+      },
+      "materials": {
+        "drawer": {
+          "color": "#0B1020",
+          "roughness": 0.6
+        },
+        "frame": {
+          "color": "#0A0D18",
+          "metalness": 0.6,
+          "roughness": 0.5
+        },
+        "top": {
+          "color": "#0C1122",
+          "metalness": 0.1,
+          "roughness": 0.85
+        }
+      }
+    },
+    "developer": {
+      "position": [0, 0, 0.74],
+      "variant": "figure"
+    },
+    "facade": {
+      "visible": false
+    },
+    "horizon": {
+      "visible": true
+    },
+    "keyboard": {
+      "materials": {
+        "body": {
+          "color": "#0A0E1A"
+        },
+        "keys": {
+          "color": "#141A2C"
+        }
+      }
+    },
+    "lamp": {
+      "visible": false
+    },
+    "monitor-agent": {
+      "edges": {
+        "color": "#8B3DFF",
+        "enabled": true,
+        "intensity": 1.6
+      },
+      "materials": {
+        "body": {
+          "color": "#080B14"
+        }
+      }
+    },
+    "monitor-game": {
+      "edges": {
+        "color": "#2E9BFF",
+        "enabled": true,
+        "intensity": 1.1
+      },
+      "materials": {
+        "body": {
+          "color": "#080B14"
+        }
+      }
+    },
+    "mouse": {
+      "materials": {
+        "body": {
+          "color": "#0A0E1A"
+        }
+      }
+    },
+    "mug": {
+      "visible": false
+    },
+    "plant": {
+      "visible": false
+    },
+    "poster": {
+      "visible": false
+    },
+    "room-floor": {
+      "visible": false
+    },
+    "rug": {
+      "visible": false
+    },
+    "stage-floor": {
+      "materials": {
+        "grid": {
+          "emissiveIntensity": 0.9
+        }
+      },
+      "visible": true
+    },
+    "walls": {
+      "visible": false
+    },
+    "window": {
+      "visible": false
+    }
+  },
+  "stage": {
+    "bloom": {
+      "enabled": true,
+      "radius": 0.72,
+      "strength": 0.85,
+      "threshold": 0.92
+    },
+    "exposure": 1,
+    "fog": 0.018,
+    "grade": true,
+    "shadows": true
+  }
+}

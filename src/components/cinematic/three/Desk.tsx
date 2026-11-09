@@ -7,6 +7,7 @@ import {DESK, KEYBOARD, LAMP, MOUSE, MUG, PLANT, WALL_PORT} from '../world';
 import {cineMaterials, lit} from './materials';
 import {curveThrough, GlowTube} from '../../cyber/three/Signal3D';
 import {Spot} from './Signals';
+import {useLook, usePractical} from '../../../shot/runtime';
 
 /**
  * The workstation: desk, monitors, keyboard, mouse, mug, lamp, a plant and the
@@ -21,39 +22,43 @@ export const Desk: React.FC<{readonly children?: React.ReactNode}> = ({children}
   const top = useMemo(() => new RoundedBoxGeometry(DESK.width, DESK.thickness, DESK.depth, 3, 0.012), []);
   const [cx, cy, cz] = DESK.center;
   const legH = cy - DESK.thickness / 2;
+  // Material slots (shot editor): top, frame, drawer.
+  const topLook = useLook('top', {color: m.desk, roughness: 0.62, metalness: 0.02});
+  const frame = useLook('frame', {color: m.steelDark, roughness: 0.55, metalness: 0.5});
+  const drawer = useLook('drawer', {color: m.plastic, roughness: 0.7});
   return (
     <group>
       <mesh geometry={top} position={[cx, cy - DESK.thickness / 2, cz]} castShadow receiveShadow>
-        <meshStandardMaterial color={m.desk} roughness={0.62} metalness={0.02} />
+        <meshStandardMaterial {...topLook} />
       </mesh>
       {/* Steel frame: two trestle legs */}
       {[-1, 1].map((s) => (
         <group key={s} position={[cx + s * (DESK.width / 2 - 0.12), 0, cz]}>
           <mesh position={[0, legH / 2, 0]} castShadow>
             <boxGeometry args={[0.05, legH, 0.05]} />
-            <meshStandardMaterial color={m.steelDark} roughness={0.55} metalness={0.5} />
+            <meshStandardMaterial {...frame} />
           </mesh>
           <mesh position={[0, 0.02, 0]} castShadow>
             <boxGeometry args={[0.06, 0.04, DESK.depth - 0.16]} />
-            <meshStandardMaterial color={m.steelDark} roughness={0.55} metalness={0.5} />
+            <meshStandardMaterial {...frame} />
           </mesh>
           <mesh position={[0, legH - 0.03, 0]}>
             <boxGeometry args={[0.06, 0.04, DESK.depth - 0.16]} />
-            <meshStandardMaterial color={m.steelDark} roughness={0.55} metalness={0.5} />
+            <meshStandardMaterial {...frame} />
           </mesh>
         </group>
       ))}
       <mesh position={[cx, legH - 0.05, cz - DESK.depth / 2 + 0.1]}>
         <boxGeometry args={[DESK.width - 0.3, 0.04, 0.04]} />
-        <meshStandardMaterial color={m.steelDark} roughness={0.55} metalness={0.5} />
+        <meshStandardMaterial {...frame} />
       </mesh>
       {/* A drawer unit under the right side */}
       <mesh position={[cx + 0.55, 0.3, cz]} castShadow receiveShadow>
         <boxGeometry args={[0.42, 0.6, DESK.depth - 0.2]} />
-        <meshStandardMaterial color={m.plastic} roughness={0.7} />
+        <meshStandardMaterial {...drawer} />
       </mesh>
       {[0.12, 0.3, 0.48].map((y) => (
-        <mesh key={y} position={[cx + 0.55, y, cz + DESK.depth / 2 - 0.095]}>
+        <mesh key={y} position={[cx + 0.55, y, cz + DESK.depth / 2 - 0.095]} userData={{noEdges: true}}>
           <boxGeometry args={[0.2, 0.012, 0.012]} />
           <meshStandardMaterial color={m.steel} roughness={0.4} metalness={0.7} />
         </mesh>
@@ -82,43 +87,49 @@ export const Monitor: React.FC<{
   /** Stand height (screen centre above the desk surface). */
   readonly standBase?: Vec3;
   readonly castLight?: boolean;
-}> = ({position, width, height, yaw = 0, map, power = 1, tint, light = 1, castLight = true}) => {
+  /** Shot light id of this screen's glow (practical): scales and tints the light it throws. */
+  readonly glow?: string;
+}> = ({position, width, height, yaw = 0, map, power = 1, tint, light = 1, castLight = true, glow}) => {
   const th = useTheme();
   const m = useMemo(() => cineMaterials(th), [th]);
   const bezel = 0.012;
   const bodyGeo = useMemo(() => new RoundedBoxGeometry(width + bezel * 2, height + bezel * 2, 0.035, 2, 0.006), [width, height]);
   const standH = position[1] - DESK.center[1] - height / 2;
-  const screenColor = useMemo(() => new THREE.Color(1, 1, 1).multiplyScalar(Math.max(0.015, 1.1 * power)), [power]);
+  // Material slots (shot editor): body (bezel + stand), screen (colour tints the picture, emissive intensity = brightness).
+  const body = useLook('body', {color: m.plasticDark, roughness: 0.45, metalness: 0.1});
+  const screen = useLook('screen', {color: '#ffffff', emissiveIntensity: 1});
+  const practical = usePractical(glow ?? '', tint);
+  const screenColor = useMemo(() => new THREE.Color(screen.color).multiplyScalar(Math.max(0.015, 1.1 * power * screen.emissiveIntensity)), [power, screen.color, screen.emissiveIntensity]);
   return (
     <group position={V(position)} rotation={[0, yaw, 0]}>
       <mesh geometry={bodyGeo} position={[0, 0, -0.0175]} castShadow>
-        <meshStandardMaterial color={m.plasticDark} roughness={0.45} metalness={0.1} />
+        <meshStandardMaterial {...body} />
       </mesh>
       {/* The picture: unlit, so it is exactly the painted canvas. */}
-      <mesh position={[0, 0, 0.0005]}>
+      <mesh position={[0, 0, 0.0005]} userData={{noEdges: true}}>
         <planeGeometry args={[width, height]} />
-        <meshBasicMaterial map={map} color={screenColor} toneMapped={false} />
+        <meshBasicMaterial map={map} color={screenColor} toneMapped={false} transparent={screen.opacity < 1} opacity={screen.opacity} />
       </mesh>
       {/* Glass sheen: a very faint reflective layer */}
-      <mesh position={[0, 0, 0.001]}>
+      <mesh position={[0, 0, 0.001]} userData={{noEdges: true}}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial color="#000000" roughness={0.12} metalness={0.9} transparent opacity={0.08} />
       </mesh>
       {/* Stand: neck and base */}
       <mesh position={[0, -height / 2 - standH / 2, -0.06]} castShadow>
         <boxGeometry args={[0.05, standH + 0.02, 0.025]} />
-        <meshStandardMaterial color={m.plasticDark} roughness={0.5} />
+        <meshStandardMaterial {...body} roughness={0.5} />
       </mesh>
       <mesh position={[0, -height / 2 - standH + 0.008, -0.02]} castShadow receiveShadow>
         <cylinderGeometry args={[0.13, 0.15, 0.016, 28]} />
-        <meshStandardMaterial color={m.plasticDark} roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial {...body} roughness={0.5} metalness={0.2} />
       </mesh>
       {/* Power LED on the bezel */}
-      <mesh position={[width / 2 - 0.02, -height / 2 - 0.004, 0.001]}>
+      <mesh position={[width / 2 - 0.02, -height / 2 - 0.004, 0.001]} userData={{noEdges: true}}>
         <planeGeometry args={[0.006, 0.003]} />
         <meshBasicMaterial color={lit('#EAF2FF', 1.2 * power)} />
       </mesh>
-      <pointLight position={[0, 0, 0.5]} intensity={(castLight) ? (2.0 * light * power) : 0} color={tint} distance={3.2} decay={2} castShadow={false} />
+      <pointLight position={[0, 0, 0.5]} intensity={(castLight) ? (2.0 * light * power * practical.intensity) : 0} color={practical.color} distance={3.2} decay={2} castShadow={false} />
     </group>
   );
 };
@@ -148,11 +159,20 @@ export const Keyboard: React.FC<{readonly position?: Vec3}> = ({position = KEYBO
     mesh.castShadow = true;
     return mesh;
   }, []);
+  // Material slots (shot editor): body, keys.
+  const body = useLook('body', {color: m.plastic, roughness: 0.55});
+  const keyLook = useLook('keys', {color: '#1C1F28', roughness: 0.6});
+  const keyMat = keys.material as THREE.MeshStandardMaterial;
+  keyMat.color.set(keyLook.color);
+  keyMat.roughness = keyLook.roughness;
+  keyMat.metalness = keyLook.metalness;
+  keyMat.emissive.set(keyLook.emissive);
+  keyMat.emissiveIntensity = keyLook.emissiveIntensity;
   return (
     <group position={V(position)} rotation={[0, 0.03, 0]}>
       <mesh position={[0, 0.006, 0]} castShadow receiveShadow>
         <boxGeometry args={[KEYBOARD.width, 0.012, KEYBOARD.depth]} />
-        <meshStandardMaterial color={m.plastic} roughness={0.55} />
+        <meshStandardMaterial {...body} />
       </mesh>
       <primitive object={keys} />
     </group>
@@ -162,10 +182,11 @@ export const Keyboard: React.FC<{readonly position?: Vec3}> = ({position = KEYBO
 export const Mouse: React.FC<{readonly position?: Vec3}> = ({position = MOUSE.position}) => {
   const th = useTheme();
   const m = useMemo(() => cineMaterials(th), [th]);
+  const body = useLook('body', {color: m.plastic, roughness: 0.45});
   return (
     <mesh position={V(position)} rotation={[0, -0.2, 0]} scale={[0.6, 0.35, 1]} castShadow>
       <sphereGeometry args={[0.055, 20, 14]} />
-      <meshStandardMaterial color={m.plastic} roughness={0.45} />
+      <meshStandardMaterial {...body} />
     </mesh>
   );
 };
@@ -192,10 +213,12 @@ export const Mug: React.FC<{readonly position?: Vec3}> = ({position = MUG.positi
 };
 
 /** Desk lamp: a weighted base, an arm, a shade, and a warm practical light. `on` 0..1. */
-export const Lamp: React.FC<{readonly position?: Vec3; readonly on?: number}> = ({position = LAMP.position, on = 1}) => {
+export const Lamp: React.FC<{readonly position?: Vec3; readonly on?: number; readonly glow?: string}> = ({position = LAMP.position, on: onProp = 1, glow}) => {
   const th = useTheme();
   const m = useMemo(() => cineMaterials(th), [th]);
-  const warm = th.tone.human.base;
+  const practical = usePractical(glow ?? '', th.tone.human.base);
+  const warm = practical.color;
+  const on = onProp * practical.intensity;
   return (
     <group position={V(position)} rotation={[0, -0.5, 0]}>
       <mesh position={[0, 0.012, 0]} castShadow>

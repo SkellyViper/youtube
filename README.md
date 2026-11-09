@@ -13,6 +13,8 @@ Both modes mount the same composition component and read the same timeline. Noth
 
 The included demo is *"Not detected ≠ does not exist"*: 4 scenes, 11 beats, about 38.7 s when exported.
 
+**Style Lab V2** (current direction): fewer objects, a still camera, the legacy Tron-like look, and a **shot editor** (`/style-lab/<scene>/edit`) for editing 3D shots without rewriting them: hierarchy, object inspector, lights and presets, camera lock, beat timing, save to repo, export/import, render the same file. See [docs/STYLE_LAB_V2.md](docs/STYLE_LAB_V2.md) and the audit of the earlier experiments in [docs/style-lab-v2/AUDIT.md](docs/style-lab-v2/AUDIT.md).
+
 The **Style Lab** (`/style-lab`) holds the channel's visual language in motion: six **cinematic 3D experiments** (documentary-style reenactments: a real room, a data hall, cameras that travel), ten story-driven 2D scenes from the first episode, and the original ten experiments, all switchable between five visual identities and comparable beat for beat. See [docs/CINEMATIC_VISUAL_LANGUAGE.md](docs/CINEMATIC_VISUAL_LANGUAGE.md) (the cinematography playbook), [docs/FERN_VISUAL_RESEARCH.md](docs/FERN_VISUAL_RESEARCH.md) (the research behind it), [docs/cinematic/](docs/cinematic/) (critique, builder brief, quality report), [docs/STYLE_LAB_REDESIGN.md](docs/STYLE_LAB_REDESIGN.md) (the 2D redesign, themes, gallery) and [docs/STYLE_LAB.md](docs/STYLE_LAB.md) (the original experiments).
 
 ---
@@ -52,6 +54,7 @@ On the first render, Remotion downloads its own headless Chrome automatically. F
 | `npm run story:preview -- 04-replication neon` | Redesign: screenshots from the live Player (no render) with a contact sheet. |
 | `npm run cine:render -- 02-wrong-project --theme=neon` | Cinematic: render one experiment in one theme to `out/cinematic/` (`--all-themes`, `all`, `--fps=30`). |
 | `npm run cine:stills -- 01-john`, `npm run cine:thumbs`, `npm run cine:frames`, `npm run cine:sheet` | Cinematic: stills, gallery posters, key frames from the MP4s, contact sheet. |
+| `npm run cine:render -- 01-john --shot=draft.shot.json` | Editable shot: render an exported editor draft instead of the approved `shot.json` (`--code-defaults` renders the code alone). Also works for `cine:stills`. |
 | `npm run cine:preview -- cine-01-john neon` | Cinematic: checkpoint and mid-beat screenshots from the live Player (needs `npm run dev`); works on Windows, GPU through ANGLE. |
 
 > **NODE_ENV:** If your shell exports `NODE_ENV=development`, `vite build` would normally bundle React's development build, which is about 5× slower. `vite.config.ts` forces production for builds, so `npm run present` is always fast.
@@ -85,6 +88,7 @@ URL options:
 - `/style-lab`: the Style Lab gallery. `/style-lab/03-swarm` opens one sample in the presenter (same keys, plus `[` / `]` for the previous / next sample and `Esc` or `G` for the gallery).
 - `/style-lab/04-replication?concept=redesign&theme=infrared&compare=theme:glacial`: a scene with its concept, theme and comparison (`O`, `T`, `C` keys). Concepts are `original` (legacy sample), `redesign` (2D story scene) and `cinematic` (3D reenactment); `compare=concept:cinematic` puts another treatment beside it.
 - `/style-lab/cine-02-wrong-project`: a cinematic experiment opens as the Cinematic concept of its scene family.
+- `/style-lab/cine-01-john/edit`: the shot editor for an editable 3D scene (same presenter keys, plus `I` free camera, `Esc` deselect, `Ctrl+Z` / `Ctrl+Shift+Z`). `?theme=` picks the theme.
 
 ## Architecture
 
@@ -93,14 +97,15 @@ src/
   engine/        Timeline, beat clocks, property tracks, camera, <EpisodeComposition>
   components/    Reusable primitives: SplitText, Mask, DrawPath, path builders, backdrop, seeded random
     cyber/       Style Lab primitives: 3D stage, agent core, signals, media frames (docs/STYLE_LAB.md)
-    cinematic/   Cinematic 3D primitives: world geography, room, desk, developer, racks, data hall, routes, screen painters
+    cinematic/   Cinematic 3D primitives: world geography, room, desk, developer, racks, data hall, routes, screen painters, legacy stage
+  shot/          Editable shots (Style Lab V2): schema, code defaults <- patch, ShotObject / useLook / useMotion, presets
     story/       2D story primitives of the redesign (workspace, game, chat, machines)
   scenes/        Explainer content. One folder per topic (scene beats + visual layers)
     style-lab/   The ten Style Lab samples
     redesign/    The ten 2D story scenes
     cinematic/   The six cinematic 3D experiments
   videos/        Episode definitions + composition components + registry.ts
-  player/        Presentation app: usePresenter state machine, keyboard, HUD; lab/ = Style Lab gallery
+  player/        Presentation app: usePresenter state machine, keyboard, HUD; lab/ = Style Lab gallery; lab/editor/ = shot editor
   remotion/      Remotion entry point (registerRoot) and <Composition> registrations
   styles/        theme.ts (provisional design tokens), cyber.ts (Style Lab tokens), motion.ts, fonts.ts
 scripts/         render.mjs, stills.mjs, verify-video.mjs, lab.mjs / story.mjs / cine.mjs (Style Lab tooling), dev/preview.mjs
@@ -236,6 +241,7 @@ The render script bundles, renders, encodes and then verifies:
   - back, replay, Home/End and deep links
   - the HUD and fullscreen
 - **Screenshots:** one per checkpoint, saved to `test-results/checkpoints/`.
+- **Shot editor tests** (`tests/shot-editor.spec.ts`): open from gallery and viewer; select from the hierarchy and by clicking in the viewport; transform, visibility, light and preset edits with the image difference measured; undo, reset; camera lock measured across beats; beat inspection and retiming; draft kept across reload; export → import; presenter keys inside the editor. Screenshots in `test-results/shot-editor/`.
 - **Cinematic experiments tests** (`tests/cinematic-lab.spec.ts`): the gallery section, the three-way concept switch and compare, every experiment walked beat by beat with exact checkpoint frames, back/replay/Home/End, deterministic seeking with shadows and canvas screens, theme switch, fullscreen.
 - **Style Lab tests** (`tests/style-lab.spec.ts`):
   - the gallery lists ten samples with thumbnails; mouse and keyboard navigation

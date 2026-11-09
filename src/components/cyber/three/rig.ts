@@ -12,6 +12,9 @@ export type Rig = {
   readonly target: Vec3;
   readonly fov: number;
   readonly roll?: number;
+  /** Default perspective. Orthographic shows `orthoHeight` world units vertically (fov is ignored). */
+  readonly projection?: 'perspective' | 'orthographic';
+  readonly orthoHeight?: number;
 };
 
 export type RigKey = Partial<Rig>;

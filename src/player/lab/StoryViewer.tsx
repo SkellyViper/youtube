@@ -246,6 +246,11 @@ const StoryChrome: React.FC<{
           <Btn onClick={ctx.toggleFullscreen} title="Presentation mode: fullscreen (F)" active={ctx.isFullscreen} testId="lab-fullscreen">
             Present
           </Btn>
+          {concept === 'cinematic' && family.cinematic?.shot ? (
+            <Btn onClick={() => navigate(`${family.cinematic!.slug}/edit`)} title="Open this shot in the editor (objects, lights, camera, beats)" testId="lab-edit-shot">
+              Edit shot
+            </Btn>
+          ) : null}
         </div>
       </div>
 

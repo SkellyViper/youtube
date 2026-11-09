@@ -9,7 +9,13 @@
 //   node scripts/cine.mjs sheet                                       contact sheet of the rendered MP4s -> out/cinematic/contact-sheet.jpg
 //   node scripts/cine.mjs info 02-wrong-project                       beat sheet (frames)
 //
-// Options: --theme=neon|infrared|glacial|ghost|spectral  --all-themes  --fps=60|30  --concurrency=N  --scale=0.5  --png
+// Editable shots (Style Lab V2, docs/STYLE_LAB_V2.md):
+//   node scripts/cine.mjs render 01-john                              uses the approved src/scenes/cinematic/01-john/shot.json
+//   node scripts/cine.mjs render 01-john --shot=drafts/x01.json       renders an exported editor draft instead (-> ...-x01.mp4)
+//   node scripts/cine.mjs render 01-john --code-defaults              renders the code defaults (empty patch)  (-> ...-code.mp4)
+//   (the same flags work for `stills`)
+//
+// Options: --theme=neon|infrared|glacial|ghost|spectral  --all-themes  --fps=60|30  --concurrency=N  --scale=0.5  --png  --out=file.mp4
 // Environment: REMOTION_BROWSER_EXECUTABLE, REMOTION_GL (see scripts/browser.mjs). Contact sheets use ffmpeg only.
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
@@ -32,6 +38,22 @@ const THEMES = ['neon', 'infrared', 'glacial', 'ghost', 'spectral'];
 const chromiumOptions = {gl: flag('gl') ?? defaultGl};
 const outRoot = path.join(root, 'out', 'cinematic');
 const fps = Number(flag('fps') ?? 60);
+
+/**
+ * Shot override: `--shot=<file.json>` (an editor export) or `--code-defaults`
+ * (empty patch). Passed as the `shot` input prop, which replaces the approved
+ * shot.json for editable scenes and is ignored by the others.
+ */
+const shotOverride = (() => {
+  if (has('code-defaults')) return {tag: 'code', patch: {}};
+  const file = flag('shot');
+  if (!file) return null;
+  const abs = path.resolve(process.cwd(), file);
+  const patch = JSON.parse(fs.readFileSync(abs, 'utf8'));
+  return {tag: path.basename(abs).replace(/(\.shot)?\.json$/, ''), patch};
+})();
+const propsFor = (theme) => (shotOverride ? {theme, shot: shotOverride.patch} : {theme});
+const shotSuffix = shotOverride ? `-${shotOverride.tag}` : '';
 
 /** Scene slugs come from the folders in src/scenes/cinematic. */
 const allSlugs = () =>
@@ -65,7 +87,8 @@ const makeBundle = async () => {
 };
 
 const loadCompositions = async (serveUrl, puppeteerInstance) => {
-  const comps = await getCompositions(serveUrl, {puppeteerInstance, chromiumOptions, browserExecutable});
+  // Input props reach calculateMetadata, so a retimed draft gets its own duration.
+  const comps = await getCompositions(serveUrl, {puppeteerInstance, chromiumOptions, browserExecutable, inputProps: propsFor(themesWanted()[0])});
   return new Map(comps.filter((c) => c.id.startsWith('cine-')).map((c) => [c.id.slice(5), c]));
 };
 
@@ -115,7 +138,7 @@ const commands = {
     for (const slug of slugs) {
       for (const theme of themes) {
         const comp = withFps(comps.get(slug));
-        const output = path.join(outRoot, `${slug}-${theme}${fps !== 60 ? `-${fps}fps` : ''}.mp4`);
+        const output = flag('out') ? path.resolve(process.cwd(), flag('out')) : path.join(outRoot, `${slug}-${theme}${shotSuffix}${fps !== 60 ? `-${fps}fps` : ''}.mp4`);
         const t0 = Date.now();
         console.log(`[cine] rendering ${slug} / ${theme}: ${comp.durationInFrames} frames @ ${comp.fps}fps, concurrency ${concurrency}`);
         await renderMedia({
@@ -123,7 +146,7 @@ const commands = {
           serveUrl,
           codec: 'h264',
           outputLocation: output,
-          inputProps: {theme},
+          inputProps: propsFor(theme),
           imageFormat: 'png',
           crf: 16,
           pixelFormat: 'yuv420p',
@@ -159,12 +182,12 @@ const commands = {
       for (const theme of themes) {
         const comp = comps.get(slug);
         const frames = flag('frames') ? flag('frames').split(',').map(Number) : sampleFrames(comp, Number(flag('every') ?? 0.75));
-        const outDir = path.join(outRoot, 'stills', `${slug}-${theme}`);
+        const outDir = path.join(outRoot, 'stills', `${slug}-${theme}${shotSuffix}`);
         fs.mkdirSync(outDir, {recursive: true});
         const files = [];
         for (const frame of frames) {
           const output = path.join(outDir, `${slug}-${theme}-f${pad(frame)}.${png ? 'png' : 'jpg'}`);
-          await renderStill({composition: comp, serveUrl, frame, output, inputProps: {theme}, imageFormat: png ? 'png' : 'jpeg', ...(png ? {} : {jpegQuality: 90}), scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, overwrite: true});
+          await renderStill({composition: comp, serveUrl, frame, output, inputProps: propsFor(theme), imageFormat: png ? 'png' : 'jpeg', ...(png ? {} : {jpegQuality: 90}), scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, overwrite: true});
           files.push(output);
           console.log(`[still] ${path.relative(root, output)}`);
         }

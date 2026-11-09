@@ -9,6 +9,7 @@ import {LAB_FPS, LAB_SAMPLES, labInfo} from '../videos/style-lab/registry';
 import {STORY_SCENES} from '../videos/style-lab/redesign';
 import {CINEMATIC_SCENES} from '../videos/style-lab/cinematic';
 import {DEFAULT_THEME} from '../styles/themes';
+import {shotEpisode, type ShotPatch} from '../shot';
 
 /**
  * Remotion registration. Durations are derived from the same timeline the
@@ -85,6 +86,7 @@ export const RemotionRoot: React.FC = () => {
       <Folder name="Cinematic">
         {CINEMATIC_SCENES.map((scene) => {
           const t = buildTimeline(scene.episode, LAB_FPS);
+          const {shot, baseEpisode} = scene;
           return (
             <Composition
               key={scene.id}
@@ -95,6 +97,13 @@ export const RemotionRoot: React.FC = () => {
               height={scene.episode.height ?? 1080}
               durationInFrames={t.durationInFrames}
               defaultProps={{theme: DEFAULT_THEME}}
+              // Editable shots: a `shot` prop (an editor draft passed with --props) can retime beats,
+              // so the duration is derived from the props, exactly as the Player derives it.
+              calculateMetadata={
+                shot && baseEpisode
+                  ? ({props}) => ({durationInFrames: buildTimeline(shotEpisode(shot, baseEpisode, (props as {shot?: ShotPatch}).shot), LAB_FPS).durationInFrames})
+                  : undefined
+              }
             />
           );
         })}

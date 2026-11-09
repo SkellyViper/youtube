@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {LAB_SAMPLES, findLabSample, labInfo, type LabSample} from '../../videos/style-lab/registry';
 import {STORY_SCENES, type StoryScene} from '../../videos/style-lab/redesign';
-import {CINEMATIC_SCENES, type CinematicScene} from '../../videos/style-lab/cinematic';
+import {CINEMATIC_SCENES, findCinematicScene, type CinematicScene} from '../../videos/style-lab/cinematic';
+import {ShotEditor} from './editor/ShotEditor';
 import {familyForSlug} from './family';
 import {THEMES, THEME_IDS} from '../../styles/themes';
 import {StoryViewer} from './StoryViewer';
@@ -19,6 +20,9 @@ import './lab.css';
 
 const BASE = '/style-lab';
 
+/** `/style-lab/<slug>/edit`: the shot editor for an editable 3D scene. */
+const readEdit = (): boolean => /^\/style-lab\/[^/]+\/edit\/?$/.test(window.location.pathname);
+
 /** `/style-lab/<slug>`, or the presenter-style `?episode=lab-<slug>`. */
 const readSlug = (): string | null => {
   const m = window.location.pathname.match(/^\/style-lab\/([^/]+)/);
@@ -29,16 +33,24 @@ const readSlug = (): string | null => {
 
 export const StyleLabApp: React.FC = () => {
   const [slug, setSlug] = useState(readSlug);
+  const [edit, setEdit] = useState(readEdit);
 
   useEffect(() => {
-    const onPop = () => setSlug(readSlug());
+    const onPop = () => {
+      setSlug(readSlug());
+      setEdit(readEdit());
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  /** `slug` = a scene; `slug/edit` = its shot editor; null = the gallery. */
   const navigate = useCallback((next: string | null) => {
-    window.history.pushState(null, '', next ? `${BASE}/${next}` : BASE);
-    setSlug(next);
+    const isEdit = Boolean(next && next.endsWith('/edit'));
+    const target = next ? next.replace(/\/edit$/, '') : null;
+    window.history.pushState(null, '', target ? `${BASE}/${target}${isEdit ? '/edit' : ''}` : BASE);
+    setSlug(target);
+    setEdit(isEdit);
   }, []);
 
   // Automation hook (Playwright): the sample list with frame-accurate beat sheets.
@@ -52,6 +64,8 @@ export const StyleLabApp: React.FC = () => {
     document.title = sample ? `${String(sample.number).padStart(2, '0')} ${sample.title} · Style Lab` : fam ? `${fam.family.title} · Style Lab` : 'Style Lab';
   }, [sample, fam]);
 
+  const editable = edit ? findCinematicScene(slug) : undefined;
+  if (editable?.shot && editable.baseEpisode) return <ShotEditor key={`edit:${editable.slug}`} scene={editable} navigate={navigate} />;
   if (sample) return <LabViewer key={sample.slug} sample={sample} navigate={navigate} />;
   if (fam && slug) return <StoryViewer key={slug} family={fam.family} initialConcept={fam.concept} route={fam.route} slug={slug} navigate={navigate} />;
   if (slug && DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]) return <DevStoryViewer key={slug} slug={slug} load={DEV_SCENES[`../../scenes/redesign/${slug}/index.tsx`]} navigate={navigate} />;
@@ -110,8 +124,8 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
       </header>
       <section className="lab-section" aria-labelledby="cine-h">
         <div className="lab-section-head">
-          <h2 id="cine-h">Cinematic 3D experiments · documentary reenactments</h2>
-          <p>Six moments of the first video staged as physical scenes: a real room, a real hall, cameras that travel. Open one and switch between Original, Redesign and Cinematic 3D.</p>
+          <h2 id="cine-h">3D shots</h2>
+          <p>X01 is the Style Lab V2 proof of concept: the legacy look, a locked camera, and an editable shot (Edit shot). X02–X06 are the earlier documentary-style experiments, kept for reference until their redesign. Open one and switch between Original, Redesign and Cinematic 3D.</p>
         </div>
         <ol className="lab-grid">
           {CINEMATIC_SCENES.map((scene) => (
@@ -136,6 +150,28 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
                 </span>
                 <span className="story-tile-understand">{scene.understand}</span>
                 <span className="story-tile-meta">
+                  {scene.shot ? (
+                    <span
+                      role="link"
+                      tabIndex={0}
+                      className="pill is-edit"
+                      data-testid={`edit-shot-${scene.slug}`}
+                      title="Open the shot editor: objects, lights, camera lock, beat timing"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`${scene.slug}/edit`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`${scene.slug}/edit`);
+                      }}
+                    >
+                      Edit shot
+                    </span>
+                  ) : null}
                   <span className="pill is-cine">{scene.legacy ? 'Original + Redesign + Cinematic' : 'Redesign + Cinematic'}</span>
                   <span className="cine-tests">{scene.tests.join(' · ')}</span>
                 </span>

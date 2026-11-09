@@ -9,6 +9,7 @@ import {SkyDome} from '../../cyber/three/Environment';
 import {useStageQuality} from '../../cyber/three/Stage3D';
 import {Spot} from './Signals';
 import {cineMaterials, lit, plankTexture} from './materials';
+import {useLook, type LookProps} from '../../../shot/runtime';
 
 /**
  * John's room: four walls, a floorboard floor, a window in the back wall with
@@ -21,190 +22,273 @@ import {cineMaterials, lit, plankTexture} from './materials';
  *           the faint bounce that makes walls readable at all). 0 = pitch dark
  *           apart from practicals.
  */
-export const DevRoom: React.FC<{readonly room?: number; readonly children?: React.ReactNode}> = ({room = 1, children}) => {
+export const DevRoom: React.FC<{readonly room?: number; readonly children?: React.ReactNode}> = ({room = 1, children}) => (
+  <group>
+    <RoomFloor />
+    <RoomRug />
+    <RoomCeiling />
+    <RoomWalls />
+    <RoomWindow />
+    <RoomFacade />
+    <Bookshelf />
+    <Poster />
+    <RoomBounce room={room} />
+    {children}
+  </group>
+);
+
+/*
+ * The room's parts, exported one by one so an editable shot can wrap each in
+ * its own <ShotObject> (hide the bookshelf, recolour the walls...). DevRoom
+ * composes them exactly as before for the scenes that use the whole room.
+ * Each reads its main material through useLook(slot), which returns the
+ * component's own values when there is no shot.
+ */
+
+const useRoomMaterials = () => {
   const th = useTheme();
-  const m = useMemo(() => cineMaterials(th), [th]);
+  return useMemo(() => cineMaterials(th), [th]);
+};
+
+/** Floorboards. Slot: floor (colour multiplies the plank texture). */
+export const RoomFloor: React.FC = () => {
+  const m = useRoomMaterials();
   const floorTex = useMemo(() => plankTexture(m.floor, m.plank, [5, 5]), [m.floor, m.plank]);
+  const look = useLook('floor', {color: '#ffffff', roughness: 0.72, metalness: 0.02});
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, ROOM.back + ROOM.depth / 2]} receiveShadow userData={{noEdges: true}}>
+      <planeGeometry args={[ROOM.width, ROOM.depth]} />
+      <meshStandardMaterial map={floorTex} {...look} />
+    </mesh>
+  );
+};
+
+/** Rug under the chair. Slot: rug. */
+export const RoomRug: React.FC = () => {
+  const m = useRoomMaterials();
+  const look = useLook('rug', {color: m.rug, roughness: 0.98});
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.1, 0.006, 0.95]} receiveShadow>
+      <planeGeometry args={[2.3, 1.7]} />
+      <meshStandardMaterial {...look} />
+    </mesh>
+  );
+};
+
+/** Ceiling. Slot: ceiling. */
+export const RoomCeiling: React.FC = () => {
+  const m = useRoomMaterials();
+  const look = useLook('ceiling', {color: m.wallDark, roughness: 0.95});
+  return (
+    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM.height, ROOM.back + ROOM.depth / 2]} userData={{noEdges: true}}>
+      <planeGeometry args={[ROOM.width, ROOM.depth]} />
+      <meshStandardMaterial {...look} />
+    </mesh>
+  );
+};
+
+/** Back wall (around the window), side walls, front wall, skirting. Slots: back, sides, skirting. */
+export const RoomWalls: React.FC = () => {
+  const m = useRoomMaterials();
+  const backLook = useLook('back', {color: m.wall, roughness: 0.95});
+  const sides = useLook('sides', {color: m.wallDark, roughness: 0.95});
+  const skirting = useLook('skirting', {color: m.deskEdge, roughness: 0.8});
   const W = ROOM.width;
   const D = ROOM.depth;
   const H = ROOM.height;
   const back = ROOM.back;
   const front = back + D;
   const win = ROOM.window;
+  return (
+    <group>
+      <WallPiece x={-W / 2} y={0} w={win.x - win.width / 2 + W / 2} h={H} z={back} look={backLook} />
+      <WallPiece x={win.x + win.width / 2} y={0} w={W / 2 - (win.x + win.width / 2)} h={H} z={back} look={backLook} />
+      <WallPiece x={win.x - win.width / 2} y={0} w={win.width} h={win.y - win.height / 2} z={back} look={backLook} />
+      <WallPiece x={win.x - win.width / 2} y={win.y + win.height / 2} w={win.width} h={H - (win.y + win.height / 2)} z={back} look={backLook} />
+      <mesh position={[-W / 2, H / 2, back + D / 2]} rotation={[0, Math.PI / 2, 0]} receiveShadow userData={{noEdges: true}}>
+        <planeGeometry args={[D, H]} />
+        <meshStandardMaterial {...sides} />
+      </mesh>
+      <mesh position={[W / 2, H / 2, back + D / 2]} rotation={[0, -Math.PI / 2, 0]} receiveShadow userData={{noEdges: true}}>
+        <planeGeometry args={[D, H]} />
+        <meshStandardMaterial {...sides} />
+      </mesh>
+      {/* Front wall (behind the camera in most shots, but it closes the room for reflections and fog) */}
+      <mesh position={[0, H / 2, front]} rotation={[0, Math.PI, 0]} userData={{noEdges: true}}>
+        <planeGeometry args={[W, H]} />
+        <meshStandardMaterial {...sides} />
+      </mesh>
+      <mesh position={[0, 0.05, back + 0.012]}>
+        <boxGeometry args={[W, 0.1, 0.024]} />
+        <meshStandardMaterial {...skirting} />
+      </mesh>
+      <mesh position={[-W / 2 + 0.012, 0.05, back + D / 2]}>
+        <boxGeometry args={[0.024, 0.1, D]} />
+        <meshStandardMaterial {...skirting} />
+      </mesh>
+      <mesh position={[W / 2 - 0.012, 0.05, back + D / 2]}>
+        <boxGeometry args={[0.024, 0.1, D]} />
+        <meshStandardMaterial {...skirting} />
+      </mesh>
+    </group>
+  );
+};
+
+/** Window in the back wall: frame, glass, sill, blinds. Slot: frame. */
+export const RoomWindow: React.FC = () => {
+  const m = useRoomMaterials();
+  const frame = useLook('frame', {color: m.plastic, roughness: 0.6});
+  const win = ROOM.window;
   const windowGlass = useMemo(() => new THREE.MeshPhysicalMaterial({color: '#0A1020', roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.1, side: THREE.DoubleSide}), []);
+  return (
+    <group position={[win.x, win.y, ROOM.back]}>
+      {/* Frame: four members and a mullion (not a slab: the view beyond must show through) */}
+      {[
+        [0, win.height / 2 + 0.03, win.width + 0.12, 0.06],
+        [0, -win.height / 2 - 0.03, win.width + 0.12, 0.06],
+        [-win.width / 2 - 0.03, 0, 0.06, win.height],
+        [win.width / 2 + 0.03, 0, 0.06, win.height],
+      ].map(([x, y, w, h], i) => (
+        <mesh key={i} position={[x, y, 0.02]} castShadow>
+          <boxGeometry args={[w, h, 0.05]} />
+          <meshStandardMaterial {...frame} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0, 0.0]} userData={{noEdges: true}}>
+        <planeGeometry args={[win.width, win.height]} />
+        <primitive object={windowGlass} attach="material" />
+      </mesh>
+      <mesh position={[0, 0, 0.03]}>
+        <boxGeometry args={[0.04, win.height, 0.03]} />
+        <meshStandardMaterial {...frame} />
+      </mesh>
+      <mesh position={[0, -win.height / 2 - 0.02, 0.1]} castShadow receiveShadow>
+        <boxGeometry args={[win.width + 0.2, 0.04, 0.22]} />
+        <meshStandardMaterial color={m.deskEdge} roughness={0.75} />
+      </mesh>
+      {/* Blinds, pulled most of the way up: a short stack of slats under the head rail */}
+      <mesh position={[0, win.height / 2 + 0.02, 0.05]} castShadow>
+        <boxGeometry args={[win.width, 0.05, 0.05]} />
+        <meshStandardMaterial color="#3A3B40" roughness={0.7} />
+      </mesh>
+      {Array.from({length: 5}, (_, i) => (
+        <mesh key={i} position={[0, win.height / 2 - 0.04 - i * 0.03, 0.05]} rotation={[0.9, 0, 0]} castShadow userData={{noEdges: true}}>
+          <boxGeometry args={[win.width - 0.04, 0.004, 0.034]} />
+          <meshStandardMaterial color="#6E6F74" roughness={0.9} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+/**
+ * Exterior: the building John's room is in, seen when the camera leaves through the window.
+ * A facade around the window reveal, the storeys below down to the street, and the roof above.
+ * Slot: facade.
+ */
+export const RoomFacade: React.FC = () => {
+  const look = useLook('facade', {color: '#11141D', roughness: 0.95});
+  const W = ROOM.width;
+  const D = ROOM.depth;
+  const H = ROOM.height;
+  const back = ROOM.back;
+  const win = ROOM.window;
+  return (
+    <group>
+      <mesh position={[0, H / 2, back - 0.16]} rotation={[0, Math.PI, 0]} userData={{noEdges: true}}>
+        <planeGeometry args={[W + 0.6, H + 0.2]} />
+        <meshStandardMaterial {...look} side={THREE.FrontSide} />
+      </mesh>
+      <mesh position={[0, OUTSIDE.groundY / 2, back + D / 2]}>
+        <boxGeometry args={[W + 0.6, -OUTSIDE.groundY, D + 0.6]} />
+        <meshStandardMaterial {...look} />
+      </mesh>
+      <mesh position={[0, H + 1.6, back + D / 2]}>
+        <boxGeometry args={[W + 0.6, 3.2, D + 0.6]} />
+        <meshStandardMaterial {...look} />
+      </mesh>
+      {/* Neighbours' dark windows on the facade, either side of John's */}
+      {[-1.6, 1.6].map((dx) => (
+        <mesh key={dx} position={[win.x + dx, win.y, back - 0.17]} rotation={[0, Math.PI, 0]} userData={{noEdges: true}}>
+          <planeGeometry args={[1.1, 1.1]} />
+          <meshStandardMaterial color="#070910" roughness={0.3} metalness={0.6} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+/** Bookshelf on the left wall. Slot: shelves. */
+export const Bookshelf: React.FC = () => {
+  const m = useRoomMaterials();
+  const shelves = useLook('shelves', {color: m.desk, roughness: 0.8});
   const books = useMemo(() => {
     const rnd = createRandom(17);
     return Array.from({length: 22}, () => ({h: rnd.range(0.17, 0.27), w: rnd.range(0.025, 0.05), tilt: rnd.range(-0.05, 0.05), c: rnd.pick(['#2A2F3E', '#3A2E2A', '#263A33', '#3B3A2E', '#2E2A3E', '#41352C'])}));
   }, []);
   const shelfY = [1.35, 1.75];
-
   return (
-    <group>
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, back + D / 2]} receiveShadow>
-        <planeGeometry args={[W, D]} />
-        <meshStandardMaterial map={floorTex} color="#ffffff" roughness={0.72} metalness={0.02} />
-      </mesh>
-      {/* Rug under the chair */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.1, 0.006, 0.95]} receiveShadow>
-        <planeGeometry args={[2.3, 1.7]} />
-        <meshStandardMaterial color={m.rug} roughness={0.98} />
-      </mesh>
-      {/* Ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, H, back + D / 2]}>
-        <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color={m.wallDark} roughness={0.95} />
-      </mesh>
-      {/* Back wall in four pieces around the window */}
-      <WallPiece x={-W / 2} y={0} w={win.x - win.width / 2 + W / 2} h={H} z={back} color={m.wall} />
-      <WallPiece x={win.x + win.width / 2} y={0} w={W / 2 - (win.x + win.width / 2)} h={H} z={back} color={m.wall} />
-      <WallPiece x={win.x - win.width / 2} y={0} w={win.width} h={win.y - win.height / 2} z={back} color={m.wall} />
-      <WallPiece x={win.x - win.width / 2} y={win.y + win.height / 2} w={win.width} h={H - (win.y + win.height / 2)} z={back} color={m.wall} />
-      {/* Side walls */}
-      <mesh position={[-W / 2, H / 2, back + D / 2]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[D, H]} />
-        <meshStandardMaterial color={m.wallDark} roughness={0.95} />
-      </mesh>
-      <mesh position={[W / 2, H / 2, back + D / 2]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[D, H]} />
-        <meshStandardMaterial color={m.wallDark} roughness={0.95} />
-      </mesh>
-      {/* Front wall (behind the camera in most shots, but it closes the room for reflections and fog) */}
-      <mesh position={[0, H / 2, front]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[W, H]} />
-        <meshStandardMaterial color={m.wallDark} roughness={0.95} />
-      </mesh>
-      {/* Skirting boards */}
-      <mesh position={[0, 0.05, back + 0.012]}>
-        <boxGeometry args={[W, 0.1, 0.024]} />
-        <meshStandardMaterial color={m.deskEdge} roughness={0.8} />
-      </mesh>
-      <mesh position={[-W / 2 + 0.012, 0.05, back + D / 2]}>
-        <boxGeometry args={[0.024, 0.1, D]} />
-        <meshStandardMaterial color={m.deskEdge} roughness={0.8} />
-      </mesh>
-      <mesh position={[W / 2 - 0.012, 0.05, back + D / 2]}>
-        <boxGeometry args={[0.024, 0.1, D]} />
-        <meshStandardMaterial color={m.deskEdge} roughness={0.8} />
-      </mesh>
-
-      {/* Window: frame, sill, glass, blinds half open */}
-      <group position={[win.x, win.y, back]}>
-        {/* Frame: four members and a mullion (not a slab: the view beyond must show through) */}
-        {[
-          [0, win.height / 2 + 0.03, win.width + 0.12, 0.06],
-          [0, -win.height / 2 - 0.03, win.width + 0.12, 0.06],
-          [-win.width / 2 - 0.03, 0, 0.06, win.height],
-          [win.width / 2 + 0.03, 0, 0.06, win.height],
-        ].map(([x, y, w, h], i) => (
-          <mesh key={i} position={[x, y, 0.02]} castShadow>
-            <boxGeometry args={[w, h, 0.05]} />
-            <meshStandardMaterial color={m.plastic} roughness={0.6} />
+    <group position={[-ROOM.width / 2 + 0.15, 0, 0.6]}>
+      {shelfY.map((y) => (
+        <mesh key={y} position={[0, y, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.28, 0.03, 1.4]} />
+          <meshStandardMaterial {...shelves} />
+        </mesh>
+      ))}
+      {books.map((b, i) => {
+        const shelf = i < 12 ? 0 : 1;
+        const idx = shelf === 0 ? i : i - 12;
+        return (
+          <mesh key={i} position={[0.0, shelfY[shelf] + 0.015 + b.h / 2, -0.62 + idx * 0.1 + (shelf ? 0.14 : 0)]} rotation={[b.tilt, 0, 0]} castShadow>
+            <boxGeometry args={[0.2, b.h, b.w]} />
+            <meshStandardMaterial color={b.c} roughness={0.9} />
           </mesh>
-        ))}
-        <mesh position={[0, 0, 0.0]}>
-          <planeGeometry args={[win.width, win.height]} />
-          <primitive object={windowGlass} attach="material" />
-        </mesh>
-        <mesh position={[0, 0, 0.03]}>
-          <boxGeometry args={[0.04, win.height, 0.03]} />
-          <meshStandardMaterial color={m.plastic} roughness={0.6} />
-        </mesh>
-        <mesh position={[0, -win.height / 2 - 0.02, 0.1]} castShadow receiveShadow>
-          <boxGeometry args={[win.width + 0.2, 0.04, 0.22]} />
-          <meshStandardMaterial color={m.deskEdge} roughness={0.75} />
-        </mesh>
-        {/* Blinds, pulled most of the way up: a short stack of slats under the head rail */}
-        <mesh position={[0, win.height / 2 + 0.02, 0.05]} castShadow>
-          <boxGeometry args={[win.width, 0.05, 0.05]} />
-          <meshStandardMaterial color="#3A3B40" roughness={0.7} />
-        </mesh>
-        {Array.from({length: 5}, (_, i) => (
-          <mesh key={i} position={[0, win.height / 2 - 0.04 - i * 0.03, 0.05]} rotation={[0.9, 0, 0]} castShadow>
-            <boxGeometry args={[win.width - 0.04, 0.004, 0.034]} />
-            <meshStandardMaterial color="#6E6F74" roughness={0.9} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Exterior: the building John's room is in, seen when the camera leaves through the window.
-          A facade around the window reveal, the storeys below down to the street, and the roof above. */}
-      <group>
-        <mesh position={[0, H / 2, back - 0.16]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[W + 0.6, H + 0.2]} />
-          <meshStandardMaterial color="#11141D" roughness={0.95} side={THREE.FrontSide} />
-        </mesh>
-        <mesh position={[0, OUTSIDE.groundY / 2, back + D / 2]}>
-          <boxGeometry args={[W + 0.6, -OUTSIDE.groundY, D + 0.6]} />
-          <meshStandardMaterial color="#11141D" roughness={0.95} />
-        </mesh>
-        <mesh position={[0, H + 1.6, back + D / 2]}>
-          <boxGeometry args={[W + 0.6, 3.2, D + 0.6]} />
-          <meshStandardMaterial color="#11141D" roughness={0.95} />
-        </mesh>
-        {/* Neighbours' dark windows on the facade, either side of John's */}
-        {[-1.6, 1.6].map((dx) => (
-          <mesh key={dx} position={[win.x + dx, win.y, back - 0.17]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[1.1, 1.1]} />
-            <meshStandardMaterial color="#070910" roughness={0.3} metalness={0.6} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Bookshelf on the left wall */}
-      <group position={[-W / 2 + 0.15, 0, 0.6]}>
-        {shelfY.map((y) => (
-          <mesh key={y} position={[0, y, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.28, 0.03, 1.4]} />
-            <meshStandardMaterial color={m.desk} roughness={0.8} />
-          </mesh>
-        ))}
-        {books.map((b, i) => {
-          const shelf = i < 12 ? 0 : 1;
-          const idx = shelf === 0 ? i : i - 12;
-          return (
-            <mesh key={i} position={[0.0, shelfY[shelf] + 0.015 + b.h / 2, -0.62 + idx * 0.1 + (shelf ? 0.14 : 0)]} rotation={[b.tilt, 0, 0]} castShadow>
-              <boxGeometry args={[0.2, b.h, b.w]} />
-              <meshStandardMaterial color={b.c} roughness={0.9} />
-            </mesh>
-          );
-        })}
-      </group>
-
-      {/* A framed poster on the right wall */}
-      <group position={[W / 2 - 0.03, 1.6, 0.3]} rotation={[0, -Math.PI / 2, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.62, 0.86, 0.03]} />
-          <meshStandardMaterial color={m.plasticDark} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, 0, 0.017]}>
-          <planeGeometry args={[0.56, 0.8]} />
-          <meshStandardMaterial color="#1B2238" roughness={0.9} />
-        </mesh>
-        <mesh position={[-0.1, 0.12, 0.019]}>
-          <circleGeometry args={[0.14, 24]} />
-          <meshStandardMaterial color="#2E3C6B" roughness={0.9} />
-        </mesh>
-        <mesh position={[0.08, -0.2, 0.019]}>
-          <planeGeometry args={[0.3, 0.05]} />
-          <meshStandardMaterial color="#44507A" roughness={0.9} />
-        </mesh>
-      </group>
-
-      {/* Ambient: a faint bounce so unlit walls are not pure black. */}
-      <ambientLight intensity={0.07 * room} color="#5A6A9A" />
-      <hemisphereLight intensity={0.1 * room} color="#243052" groundColor="#120E0C" />
-      {children}
+        );
+      })}
     </group>
   );
 };
 
-const WallPiece: React.FC<{readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly z: number; readonly color: string}> = ({x, y, w, h, z, color}) => {
+/** A framed poster on the right wall. Slot: frame. */
+export const Poster: React.FC = () => {
+  const m = useRoomMaterials();
+  const frame = useLook('frame', {color: m.plasticDark, roughness: 0.5});
+  return (
+    <group position={[ROOM.width / 2 - 0.03, 1.6, 0.3]} rotation={[0, -Math.PI / 2, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[0.62, 0.86, 0.03]} />
+        <meshStandardMaterial {...frame} />
+      </mesh>
+      <mesh position={[0, 0, 0.017]} userData={{noEdges: true}}>
+        <planeGeometry args={[0.56, 0.8]} />
+        <meshStandardMaterial color="#1B2238" roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.1, 0.12, 0.019]} userData={{noEdges: true}}>
+        <circleGeometry args={[0.14, 24]} />
+        <meshStandardMaterial color="#2E3C6B" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.08, -0.2, 0.019]} userData={{noEdges: true}}>
+        <planeGeometry args={[0.3, 0.05]} />
+        <meshStandardMaterial color="#44507A" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+};
+
+/** Ambient: a faint bounce so unlit walls are not pure black. `room` scales it. */
+export const RoomBounce: React.FC<{readonly room?: number}> = ({room = 1}) => (
+  <>
+    <ambientLight intensity={0.07 * room} color="#5A6A9A" />
+    <hemisphereLight intensity={0.1 * room} color="#243052" groundColor="#120E0C" />
+  </>
+);
+
+const WallPiece: React.FC<{readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly z: number; readonly look: LookProps}> = ({x, y, w, h, z, look}) => {
   if (w <= 0 || h <= 0) return null;
   return (
-    <mesh position={[x + w / 2, y + h / 2, z]} receiveShadow>
+    <mesh position={[x + w / 2, y + h / 2, z]} receiveShadow userData={{noEdges: true}}>
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial color={color} roughness={0.95} />
+      <meshStandardMaterial {...look} />
     </mesh>
   );
 };
@@ -223,15 +307,15 @@ export const WindowLight: React.FC<{readonly intensity?: number; readonly color?
     t.position.set(win.x + 0.3, 0.6, 1.4);
     return t;
   }, [win.x]);
-  if (intensity <= 0.001) return null;
+  // Stays mounted at zero intensity: removing a light recompiles every shader.
   return (
     <>
       <directionalLight
         position={[win.x - 1.2, win.y + 2.4, ROOM.back - 3.2]}
         target={target}
-        intensity={1.1 * intensity}
+        intensity={1.1 * Math.max(0, intensity)}
         color={color ?? th.tone.system.base}
-        castShadow
+        castShadow={intensity > 0.001}
         shadow-mapSize-width={quality.shadow}
         shadow-mapSize-height={quality.shadow}
         shadow-bias={-0.0006}

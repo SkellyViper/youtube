@@ -11,6 +11,8 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {MountOffsetContext, TimelineContext} from '../../../engine/context';
 import {cyber} from '../../../styles/cyber';
 import {ThemeContext} from '../../../styles/ThemeContext';
+import {ShotContext} from '../../../shot/context';
+import {ShotEditorOverlay} from '../../../shot/EditorOverlay';
 import type {Rig} from './rig';
 
 export type BloomSettings = {
@@ -84,10 +86,15 @@ export const Stage3D: React.FC<{
   const offset = useContext(MountOffsetContext);
   // R3F renders into its own reconciler: contexts must be bridged explicitly.
   const theme = useContext(ThemeContext);
+  const shot = useContext(ShotContext);
   const quality = useStageQuality();
+  const ortho = rig.projection === 'orthographic';
 
   return (
     <ThreeCanvas
+      // Switching projection swaps the camera object: remount the canvas (editor-only action).
+      key={ortho ? 'ortho' : 'persp'}
+      orthographic={ortho}
       width={width}
       height={height}
       dpr={quality.scale}
@@ -95,16 +102,19 @@ export const Stage3D: React.FC<{
       gl={{antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false}}
       shadows={shadows}
       camera={{fov: rig.fov, near: cyber.camera.near, far: cyber.camera.far, position: rig.position as [number, number, number]}}
-      style={{position: 'absolute', inset: 0, ...style}}
+      style={{position: 'absolute', inset: 0, pointerEvents: 'auto', ...style}}
     >
       <TimelineContext.Provider value={timeline}>
         <MountOffsetContext.Provider value={offset}>
          <ThemeContext.Provider value={theme}>
-          <RigCamera rig={rig} />
-          <color attach="background" args={[background]} />
-          {fog > 0 ? <fogExp2 attach="fog" args={[fogColor, fog]} /> : null}
-          <PostFX bloom={bloom} exposure={exposure} />
-          {children}
+          <ShotContext.Provider value={shot}>
+           <RigCamera rig={rig} />
+           <color attach="background" args={[background]} />
+           {fog > 0 ? <fogExp2 attach="fog" args={[fogColor, fog]} /> : null}
+           <PostFX bloom={bloom} exposure={exposure} />
+           {children}
+           {shot?.editor?.helpers ? <ShotEditorOverlay /> : null}
+          </ShotContext.Provider>
          </ThemeContext.Provider>
         </MountOffsetContext.Provider>
       </TimelineContext.Provider>
@@ -114,7 +124,8 @@ export const Stage3D: React.FC<{
 
 /** Applies the rig to the default camera and requests a redraw whenever the frame changes. */
 const RigCamera: React.FC<{readonly rig: Rig}> = ({rig}) => {
-  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  const viewHeight = useThree((s) => s.size.height);
   const invalidate = useThree((s) => s.invalidate);
   // Subscribing to the frame makes this component re-run on every frame, even
   // if the rig object happens to be referentially stable.
@@ -125,8 +136,17 @@ const RigCamera: React.FC<{readonly rig: Rig}> = ({rig}) => {
     camera.position.set(rig.position[0], rig.position[1], rig.position[2]);
     camera.up.set(Math.sin(roll), Math.cos(roll), 0);
     camera.lookAt(rig.target[0], rig.target[1], rig.target[2]);
-    if (camera.fov !== rig.fov) {
-      camera.fov = rig.fov;
+    if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
+      // R3F's orthographic frustum is the canvas size in pixels; zoom maps it to world units.
+      const zoom = viewHeight / Math.max(0.01, rig.orthoHeight ?? 4);
+      if (camera.zoom !== zoom) {
+        camera.zoom = zoom;
+        camera.near = cyber.camera.near;
+        camera.far = cyber.camera.far;
+        camera.updateProjectionMatrix();
+      }
+    } else if ((camera as THREE.PerspectiveCamera).fov !== rig.fov) {
+      (camera as THREE.PerspectiveCamera).fov = rig.fov;
       camera.updateProjectionMatrix();
     }
     camera.updateMatrixWorld();

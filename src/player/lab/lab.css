@@ -593,3 +593,16 @@
 .story-viewer[data-concept='cinematic'] .lab-bar-title .lab-num {
   color: var(--blue-hot);
 }
+
+/* Style Lab V2: "Edit shot" on editable 3D scenes. */
+.story-tile-meta .pill.is-edit {
+  white-space: nowrap;
+  border-color: #ffc35c;
+  color: #ffd99a;
+  cursor: pointer;
+}
+.story-tile-meta .pill.is-edit:hover,
+.story-tile-meta .pill.is-edit:focus-visible {
+  background: rgba(255, 195, 92, 0.12);
+  outline: none;
+}

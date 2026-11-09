@@ -1,5 +1,7 @@
 # Cinematic visual language
 
+> **Superseded in part by [Style Lab V2](STYLE_LAB_V2.md) (2026-11-08).** Where this playbook asks for travelling cameras, continuous moves between places, physically complete rooms and districts, or practical-light realism, V2 wins: the camera stays still, objects are few and well made, the look is the Legacy Experiments' void, horizon line and luminous edges, and shorthand replaces literal staging. The research notes and the evidence-panel rules below still apply.
+
 The channel's playbook for staging technical events as physical scenes. It combines what we learned from fern's documentary reenactments (`docs/FERN_VISUAL_RESEARCH.md`) with the identity we already have: near-black, electric blue, luminous violet, restrained red; dark matte surfaces; sharp luminous accents. Think **documentary reenactment + Tron-lit night + precise explanation.**
 
 Every rule below says (1) the problem it solves, (2) the fern observation behind it, marked *observed* when it comes from frames we inspected and *inferred* when it is our reading, (3) how we adapt it so the result is ours, and (4) where it is implemented in the Style Lab (`X01` to `X06` are `src/scenes/cinematic/01-john` to `06-evidence`).
