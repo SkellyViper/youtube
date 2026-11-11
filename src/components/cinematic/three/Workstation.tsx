@@ -113,10 +113,18 @@ export const CurvedMonitor: React.FC<{
   const shell = useMemo(() => bend(new THREE.BoxGeometry(width + bezel * 2, height + bezel * 2, 0.018, 64, 1, 1).translate(0, 0, -0.009), radius), [width, height, radius]);
   // Finely segmented along x: a bent box with few vertices would cut a straight chord through the screen.
   const housing = useMemo(() => bend(new THREE.BoxGeometry(width * 0.62, height * 0.62, 0.04, 40, 1, 1).translate(0, 0, -0.04), radius), [width, height, radius]);
-  // The stand: a flat neck behind the housing, down to a thin plate on the desk.
-  const neckH = center[1] - deskY - 0.05;
-  const neckGeo = useMemo(() => new RoundedBoxGeometry(0.07, neckH, 0.022, 2, 0.008), [neckH]);
-  const plateGeo = useMemo(() => new RoundedBoxGeometry(0.3, 0.012, 0.2, 2, 0.005), []);
+  // The stand: a flat neck from the foot plate up into the rear housing. Every part touches the next one:
+  // plate on the desk, neck standing on the plate, neck sunk 5 mm into the housing (the VESA mount).
+  const plate = {width: 0.3, depth: 0.19, thickness: 0.012, z: -0.045};
+  const drop = center[1] - deskY; // desk surface below the picture centre
+  const neckTop = -0.045; // inside the housing's height (the housing spans ±0.31 × height)
+  const neckBottom = -drop + plate.thickness - 0.001; // 1 mm into the plate: no light leak under it
+  const neckH = neckTop - neckBottom;
+  const neckGeo = useMemo(() => new RoundedBoxGeometry(0.075, neckH, 0.024, 2, 0.008), [neckH]);
+  const plateGeo = useMemo(() => new RoundedBoxGeometry(plate.width, plate.thickness, plate.depth, 2, 0.005), [plate.width, plate.thickness, plate.depth]);
+  // The power LED sits on the bezel, so it follows the panel's bend (flat coordinates would leave it floating beside a curved screen).
+  const ledArc = (width / 2 - 0.03) / radius;
+  const ledR = radius - 0.002; // 2 mm proud of the bezel face
   const body = useLook('body', {color: mix(th.color.void, '#0A0B10', 0.5), roughness: 0.55, metalness: 0.25});
   const screen = useLook('screen', {color: '#ffffff', emissiveIntensity: 1});
   const glowLight = usePractical(glow, tint);
@@ -138,14 +146,14 @@ export const CurvedMonitor: React.FC<{
         <meshBasicMaterial map={map} color={pictureColor} toneMapped={false} transparent={screen.opacity < 1} opacity={screen.opacity} />
       </mesh>
       {/* No glass layer: a matte anti-glare panel (a glossy one mirrored its own glow light as a blob over the text). */}
-      <mesh geometry={neckGeo} position={[0, -neckH / 2 - 0.01, -0.085]} castShadow>
+      <mesh geometry={neckGeo} position={[0, (neckTop + neckBottom) / 2, -0.067]} castShadow receiveShadow>
         <meshStandardMaterial {...body} />
       </mesh>
-      <mesh geometry={plateGeo} position={[0, deskY - center[1] + 0.006, -0.06]} castShadow receiveShadow>
+      <mesh geometry={plateGeo} position={[0, -drop + plate.thickness / 2, plate.z]} castShadow receiveShadow>
         <meshStandardMaterial {...body} roughness={0.9} metalness={0.05} />
       </mesh>
       {/* Power LED */}
-      <mesh position={[width / 2 - 0.03, -height / 2 - bezel * 0.5, 0.002]} userData={{noEdges: true}}>
+      <mesh position={[ledR * Math.sin(ledArc), -height / 2 - bezel * 0.5, radius - ledR * Math.cos(ledArc)]} rotation={[0, -ledArc, 0]} userData={{noEdges: true}}>
         <planeGeometry args={[0.008, 0.002]} />
         <meshBasicMaterial color={lit(th.color.white, 1.1)} toneMapped={false} />
       </mesh>
@@ -224,7 +232,8 @@ export const LowKeyboard: React.FC<{readonly keyboard: KeyboardSpec}> = ({keyboa
 /** Slots: body. */
 export const SlimMouse: React.FC<{readonly position: Vec3}> = ({position}) => {
   const th = useTheme();
-  const body = useLook('body', {color: mix(th.color.void, th.color.slate, 0.55), roughness: 0.5, metalness: 0.2});
+  // Matte: a glossy shell mirrored the agent's purple light as a glowing blob under his hand.
+  const body = useLook('body', {color: mix(th.color.void, th.color.slate, 0.55), roughness: 0.85, metalness: 0.05});
   return (
     <mesh position={[position[0], position[1] + 0.016, position[2]]} rotation={[0, -0.12, 0]} scale={[0.034, 0.018, 0.058]} castShadow>
       <sphereGeometry args={[1, 28, 18]} />

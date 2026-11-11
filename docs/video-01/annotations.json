@@ -1,0 +1,74 @@
+{
+  "out": "docs/video-01/img",
+  "width": 1600,
+  "frames": [
+    {
+      "src": "docs/video-01/frames/01-wide-establish.jpg",
+      "name": "ref-01-wide.jpg",
+      "notes": [
+        {"at": [1560, 105], "label": [1280, 40], "text": "Horizon haze: the cold band every 3D frame keeps"},
+        {"at": [470, 560], "label": [40, 250], "text": "Light figure, dimmer than the screen\nrim 1.25, core 0.32, contour lines every 16.5 mm"},
+        {"at": [940, 330], "label": [700, 160], "text": "Left of the screen: his game (the intention)"},
+        {"at": [1250, 420], "label": [1420, 330], "text": "Right: the agent's terminal\nstructure only, not for reading"},
+        {"at": [1075, 632], "label": [1420, 600], "text": "Stand: neck on the plate, plate on the desk"},
+        {"at": [1150, 925], "label": [1330, 1000], "text": "One hairline of light per object"},
+        {"at": [1730, 820], "label": [1500, 760], "text": "Obsidian floor, grid fading at 8 m"},
+        {"label": [40, 1030], "text": "Shot A, locked: [1.85, 1.5, 1.85] to [-0.05, 0.92, -0.15], 28 degrees"}
+      ]
+    },
+    {
+      "src": "docs/video-01/frames/02-insert-prompt.jpg",
+      "name": "ref-02-insert.jpg",
+      "notes": [
+        {"at": [480, 68], "label": [30, 215], "text": "Intended project:\nthe tab he is not in"},
+        {"at": [880, 62], "label": [1575, 62], "text": "Active tab: cloud-ops"},
+        {"at": [1010, 480], "label": [1575, 400], "text": "Earlier session, dimmed:\ncontext, not for reading"},
+        {"at": [1425, 880], "label": [1575, 820], "text": "The prompt at\nfull contrast"},
+        {"at": [545, 958], "label": [30, 1020], "text": "Working directory under the prompt"},
+        {"label": [1575, 1030], "text": "Shot B: a cut, 26 degrees"}
+      ]
+    },
+    {
+      "src": "docs/video-01/frames/03-insert-agent.jpg",
+      "name": "ref-02b-insert-agent.jpg",
+      "notes": [
+        {"at": [400, 518], "label": [30, 420], "text": "Purple bullets:\nthe agent acting"},
+        {"at": [1440, 765], "label": [1575, 690], "text": "Evidence by context:\nan infrastructure\nrepository"},
+        {"at": [420, 800], "label": [30, 900], "text": "Spinner and elapsed time:\nit is still running"},
+        {"at": [1345, 400], "label": [1575, 250], "text": "His request, now in\nthe transcript"}
+      ]
+    },
+    {
+      "src": "docs/video-01/frames/04-wide-outcome.jpg",
+      "name": "ref-03-carry.jpg",
+      "notes": [
+        {"at": [500, 300], "label": [40, 150], "text": "Head turned to his game, away from the terminal"},
+        {"at": [1000, 262], "label": [800, 150], "text": "Play pressed: the game runs"},
+        {"at": [1005, 752], "label": [1330, 890], "text": "Hand on the mouse: a small gesture\nthat ends in contact"},
+        {"at": [1300, 790], "label": [1500, 720], "text": "Purple light with a source:\nthe side where the agent works"},
+        {"label": [40, 1030], "text": "Shot A again: the identical camera pose"}
+      ]
+    },
+    {
+      "src": "docs/video-01/frames/05-wide-agent-still-running.jpg",
+      "name": "ref-04-hold.jpg",
+      "notes": [
+        {"at": [1210, 280], "label": [1420, 170], "text": "Activity dot on the tab, purple frame:\nstill running, unattended"},
+        {"at": [1190, 520], "label": [1420, 520], "text": "terraform apply, counter still rising"},
+        {"at": [1300, 790], "label": [1420, 860], "text": "Purple on the desk: its source is the terminal"},
+        {"label": [40, 1030], "text": "Same posture, same camera as frame C"}
+      ]
+    },
+    {
+      "src": "docs/video-01/frames/06-wide-fullscreen.jpg",
+      "name": "ref-05-fullscreen.jpg",
+      "notes": [
+        {"at": [1040, 400], "label": [700, 150], "text": "The game, full screen: an ordinary action"},
+        {"at": [1260, 420], "label": [1420, 330], "text": "The terminal is behind it.\nThe agent has not stopped."},
+        {"at": [1300, 790], "label": [1420, 860], "text": "No purple left: light leaves with its source"},
+        {"at": [470, 560], "label": [40, 250], "text": "His posture does not change"},
+        {"label": [40, 1030], "text": "The export holds here for 1.0 s; the presenter for as long as the narrator wants"}
+      ]
+    }
+  ]
+}

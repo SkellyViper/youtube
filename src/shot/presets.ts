@@ -1,4 +1,5 @@
 import {cyber} from '../styles/cyber';
+import {video01} from '../styles/video01';
 import type {LightDef, LightState, ShotDef, ShotPatch, StagePatch} from './types';
 
 /**
@@ -38,6 +39,23 @@ export const rigLights = (on: Partial<Record<'key' | 'fill' | 'rim' | 'ambient' 
   },
 });
 
+/**
+ * The Video 01 rig (Legacy / Digital Noir), as the `lights` of a shot: the
+ * standard rig at the episode's levels, with the rim brought down and behind
+ * so it grazes silhouettes instead of washing a desk top. Spread it into a
+ * ShotDef and add the scene's practicals:
+ *
+ *   lights: {...noirRig(), 'glow-screen': {...}}
+ */
+export const noirRig = (): Record<string, LightDef> => {
+  const L = video01.light;
+  const rig = rigLights({key: L.key.intensity, fill: L.fill.intensity, rim: L.rim.intensity, ambient: L.ambient.intensity, sky: L.sky.intensity});
+  return {...rig, rim: {...rig.rim, defaults: {...rig.rim.defaults, position: L.rim.position, target: L.rim.target}}};
+};
+
+/** The Video 01 stage look, as the `stage` of a shot. */
+export const noirStage = (): StagePatch => ({...video01.stage, bloom: {...video01.stage.bloom}});
+
 export type LightingPreset = {
   readonly id: string;
   readonly label: string;
@@ -56,6 +74,20 @@ export type LightingPreset = {
  * A soft key is added so a figure and furniture read as solid matter.
  */
 export const LIGHTING_PRESETS: readonly LightingPreset[] = [
+  {
+    id: 'digital-noir',
+    label: 'Legacy / Digital Noir · Video 01',
+    description: 'The approved Wrong Project rig: soft cold key, almost no fill, a low blue rim from behind, faint ambient. Screens and the light figure carry the frame.',
+    rig: {
+      key: {enabled: true, intensity: video01.light.key.intensity, color: video01.light.key.color, position: video01.light.key.position, target: video01.light.key.target, castShadow: true},
+      fill: {enabled: true, intensity: video01.light.fill.intensity, color: video01.light.fill.color},
+      rim: {enabled: true, intensity: video01.light.rim.intensity, color: video01.light.rim.color, position: video01.light.rim.position, target: video01.light.rim.target},
+      ambient: {enabled: true, intensity: video01.light.ambient.intensity, color: video01.light.ambient.color},
+      sky: {enabled: true, intensity: video01.light.sky.intensity, color: video01.light.sky.color, groundColor: video01.light.sky.groundColor},
+    },
+    environment: 'off',
+    stage: {...video01.stage, bloom: {...video01.stage.bloom}, background: ''},
+  },
   {
     id: 'legacy-neon',
     label: 'Legacy neon',

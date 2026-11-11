@@ -5,6 +5,7 @@ import {CINEMATIC_SCENES, findCinematicScene, type CinematicScene} from '../../v
 import {ShotEditor} from './editor/ShotEditor';
 import {familyForSlug} from './family';
 import {THEMES, THEME_IDS} from '../../styles/themes';
+import {video01} from '../../styles/video01';
 import {StoryViewer} from './StoryViewer';
 import {Presenter, type PresenterContext} from '../PresentationApp';
 import './lab.css';
@@ -122,10 +123,11 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
           <a href="/?episode=RogueAgent">Rogue agent</a>
         </nav>
       </header>
+      <Video01Section />
       <section className="lab-section" aria-labelledby="cine-h">
         <div className="lab-section-head">
           <h2 id="cine-h">3D shots</h2>
-          <p>X01 is the Style Lab V2 proof of concept: the legacy look, a locked camera, and an editable shot (Edit shot). X02–X06 are the earlier documentary-style experiments, kept for reference until their redesign. Open one and switch between Original, Redesign and Cinematic 3D.</p>
+          <p>X01 and X02 are Style Lab V2 shots: the legacy look, a locked camera, and an editable shot (Edit shot). X02 is the reference for Video 01. X03–X06 are the earlier documentary-style experiments, kept until their redesign.</p>
         </div>
         <ol className="lab-grid">
           {CINEMATIC_SCENES.map((scene) => (
@@ -279,6 +281,84 @@ const LabGallery: React.FC<{readonly navigate: (slug: string | null) => void}> =
         </span>
       </footer>
     </main>
+  );
+};
+
+/**
+ * Video 01 · Legacy / Digital Noir: the episode's style, with its reference
+ * shot. Swatches and rules are read from the `noir` theme and the tokens in
+ * src/styles/video01.ts, so this card cannot drift from what scenes render.
+ * The link is a plain navigation: it carries `?theme=noir`, which the viewer
+ * reads on load.
+ */
+const Video01Section: React.FC = () => {
+  const th = THEMES[video01.theme];
+  const reference = `${BASE}/cine-02-wrong-project?theme=${video01.theme}`;
+  const colours: readonly (readonly [string, string, string])[] = [
+    ['Blue', th.tone.system.base, 'People, ordinary activity, neutral systems'],
+    ['Purple', th.tone.mind.base, 'AI agents, anything running on its own'],
+    ['Red', th.tone.threat.base, 'Compromise, danger, escalation'],
+    ['Void', th.color.void, 'The base of every frame'],
+  ];
+  const rules: readonly (readonly [string, string])[] = [
+    ['Camera', 'One locked wide shot per scene. Cut to an insert for evidence; never travel to it.'],
+    ['People', 'Featureless figures of light with contour lines, dimmer than the screens they look at.'],
+    ['Objects', 'Only what the story needs: dark matter with one hairline of light.'],
+    ['Motion', 'Small gestures and real changes on screens. Nothing moves to fill time.'],
+  ];
+  return (
+    <section className="lab-section v01" aria-labelledby="v01-h" data-testid="video01-style">
+      <div className="lab-section-head">
+        <h2 id="v01-h">Video 01 · {video01.name}</h2>
+        <p>The first episode&rsquo;s look, taken from its approved shot. Every themed scene can be viewed in it: choose {th.name} in the viewer, or add ?theme={video01.theme}.</p>
+      </div>
+      <div className="v01-body">
+        <a className="v01-ref" href={reference} data-testid="video01-reference">
+          <span className="cine-thumb">
+            <img src="/lab/video01/reference.jpg" alt="A figure made of light at a curved monitor on a dark grid floor: the game on the left of the screen, a coding agent's terminal on the right." width={1280} height={720} loading="lazy" />
+          </span>
+          <span className="lab-caption">
+            <span className="lab-num">X02</span>
+            <span className="lab-title">The wrong project</span>
+            <span className="lab-kind lab-kind-3d">Reference shot</span>
+          </span>
+        </a>
+        <div className="v01-spec">
+          <dl className="v01-colours">
+            {colours.map(([name, hex, role]) => (
+              <div key={name}>
+                <dt>
+                  <i style={{background: hex}} aria-hidden="true" />
+                  {name}
+                </dt>
+                <dd>
+                  {role} <code>{hex}</code>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <dl className="v01-rules">
+            {rules.map(([name, rule]) => (
+              <div key={name}>
+                <dt>{name}</dt>
+                <dd>{rule}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="v01-files">
+            <span>
+              Guide <code>docs/VIDEO_01_VISUAL_LANGUAGE.md</code>
+            </span>
+            <span>
+              Tokens <code>src/styles/video01.ts</code>
+            </span>
+            <span>
+              Kit <code>src/components/video01</code>
+            </span>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 };
 

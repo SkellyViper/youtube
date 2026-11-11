@@ -15,7 +15,7 @@
 //   node scripts/cine.mjs render 01-john --code-defaults              renders the code defaults (empty patch)  (-> ...-code.mp4)
 //   (the same flags work for `stills`)
 //
-// Options: --theme=neon|infrared|glacial|ghost|spectral  --all-themes  --fps=60|30  --concurrency=N  --scale=0.5  --png  --out=file.mp4
+// Options: --theme=neon|infrared|glacial|ghost|spectral|noir  --all-themes  --fps=60|30  --concurrency=N  --scale=0.5  --png  --out=file.mp4
 // Environment: REMOTION_BROWSER_EXECUTABLE, REMOTION_GL (see scripts/browser.mjs). Contact sheets use ffmpeg only.
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
@@ -34,7 +34,7 @@ const positional = args.slice(1).filter((a) => !a.startsWith('--'));
 const flag = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 const has = (name) => args.includes(`--${name}`);
 
-const THEMES = ['neon', 'infrared', 'glacial', 'ghost', 'spectral'];
+const THEMES = ['neon', 'infrared', 'glacial', 'ghost', 'spectral', 'noir'];
 const chromiumOptions = {gl: flag('gl') ?? defaultGl};
 const outRoot = path.join(root, 'out', 'cinematic');
 const fps = Number(flag('fps') ?? 60);

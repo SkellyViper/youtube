@@ -17,10 +17,10 @@ export const baseEpisode = defineEpisode({
       id: 'wrong-project',
       title: 'The wrong project',
       beats: [
-        {id: 'wp-type', label: 'Establish: his game, and a task for his agent', duration: 4.5, notes: 'Shot A. John at his desk. Left of the ultrawide: his game (my-game) in the engine editor. Right: a terminal with two tabs, my-game and cloud-ops; cloud-ops is active. He types a task for his agent: a new enemy that hides, scavenges, multiplies and ambushes the player.'},
+        {id: 'wp-type', label: 'Establish: his game, and a task for his agent', duration: 4.2, notes: 'Shot A. John at his desk. Left of the ultrawide: his game (my-game) in the engine editor. Right: a terminal with two tabs, my-game and cloud-ops; cloud-ops is active. He types a task for his agent: a new enemy that hides, scavenges, multiplies and ambushes the player.'},
         {id: 'wp-send', label: 'Trigger: Enter, in the cloud-ops tab', duration: 4.5, notes: 'Shot B, the terminal insert. The task sits in the prompt, ~/cloud-ops under it. Enter. The agent searches for the game files, finds an infrastructure repo, and creates enemies/scavenger.gd in ~/cloud-ops.'},
-        {id: 'wp-carry', label: 'Outcome: it runs in cloud-ops; he goes back to his game', duration: 4.5, notes: 'Shot A. The agent keeps working on the right. He does not react: he takes the mouse, clicks his game and presses play.'},
-        {id: 'wp-hold', label: 'Casual continuation, ominous hold', duration: 4.5, hold: 1.0, notes: 'Shot A. He leans back and plays his game. On the right the agent is still running in cloud-ops (terraform), a faint purple on that side of the desk.'},
+        {id: 'wp-carry', label: 'Outcome: it runs in cloud-ops; he goes back to his game', duration: 3.8, notes: 'Shot A. The agent keeps working on the right. He does not react: he takes the mouse, clicks his game and presses play.'},
+        {id: 'wp-hold', label: 'He forgets it: the game goes full screen', duration: 3.6, hold: 1.0, notes: 'Shot A. The agent is still running in cloud-ops (terraform), purple on that side of the desk. He makes his game full screen: the terminal and its light disappear behind it. He plays on, posture unchanged.'},
       ],
     },
   ],

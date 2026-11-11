@@ -40,6 +40,8 @@ export type RepoScreenState = {
   readonly playing: number;
   /** 0..1 the ominous hold: activity dot on the cloud-ops tab, faint purple glow. */
   readonly linger: number;
+  /** 0..1 he makes the running game full screen: it grows over the editor and the terminal, which keep going behind it. */
+  readonly fullscreen?: number;
   /** Optional seconds since Enter for the spinner's counter (default: derived from working and linger). */
   readonly elapsed?: number;
   /** Optional seconds since play was pressed, for the knight's run (default: `time`). */
@@ -69,6 +71,9 @@ const G_STABS_H = 46;
 /** Game pixels are 6 design px. The viewport is 131 x 120 game px. */
 const GPX = 6;
 const VIEWPORT: Rect = {x: G_MAIN_X + 14, y: G_BODY_Y + G_STABS_H + 8, w: 131 * GPX, h: 120 * GPX};
+/** Full screen: the viewport scaled to the picture's height (22/3 design px per game px = 11 px in the 3072 px export), centred. */
+const FULLSCREEN_X = 544;
+const FULLSCREEN_BARS = '#010207';
 const GROUND_Y = 100;
 const PLAT_A = {x: 30, y: 64, n: 3};
 const PLAT_B = {x: 70, y: 52, n: 3};
@@ -781,10 +786,23 @@ export const paintRepoScreen = (ctx: CanvasRenderingContext2D, width: number, he
   }
 
   /* ---------------- the game window: the level comes alive when he presses play */
+  const play = smooth(playing);
+  const tp = s.playClock ?? t;
+  // The knight: standing at the start while editing, running the level while playing.
+  const run = knightRun(tp);
+  const kx = lerp(22, run.x, play);
+  const lift = run.lift * play;
+  const bobY = play > 0.5 && run.step ? 1 : 0;
+  /** Coins and the knight, for a level whose top-left is (ox, oy) and whose game pixel is `px` design px. */
+  const sprites = (ox: number, oy: number, px: number) => {
+    COINS.forEach(([x, y], i) => {
+      const bob = play > 0 ? Math.round(Math.sin(tp * 3.2 + i * 1.3) * play) : 0;
+      drawPix(ctx, COIN_PIX, L.coin, ox + (x + 0.5) * px, oy + (y + bob) * px, px);
+    });
+    drawPix(ctx, KNIGHT_PIX, L.knight, ox + kx * px, oy + (GROUND_Y - lift) * px + (bobY * px) / 2, px, play > 0.5 && run.left);
+  };
   {
     const V = VIEWPORT;
-    const play = smooth(playing);
-    const tp = s.playClock ?? t;
     // Editor overlay (the camera's frame) while editing; gone while the game runs.
     if (play < 1) {
       ctx.strokeStyle = rgba(sys.hot, 0.3 * (1 - play));
@@ -798,16 +816,7 @@ export const paintRepoScreen = (ctx: CanvasRenderingContext2D, width: number, he
     ctx.beginPath();
     ctx.rect(V.x, V.y, V.w, V.h);
     ctx.clip();
-    COINS.forEach(([x, y], i) => {
-      const bob = play > 0 ? Math.round(Math.sin(tp * 3.2 + i * 1.3) * play) : 0;
-      drawPix(ctx, COIN_PIX, L.coin, V.x + (x + 0.5) * GPX, V.y + (y + bob) * GPX, GPX);
-    });
-    // The knight: standing at the start while editing, running the level while playing.
-    const run = knightRun(tp);
-    const kx = lerp(22, run.x, play);
-    const lift = run.lift * play;
-    const bobY = play > 0.5 && run.step ? 1 : 0;
-    drawPix(ctx, KNIGHT_PIX, L.knight, V.x + kx * GPX, V.y + (GROUND_Y - lift) * GPX + bobY * 3, GPX, play > 0.5 && run.left);
+    sprites(V.x, V.y, GPX);
     ctx.restore();
     // Play button; a small "running" state while the game runs.
     const ty = GAME.y + G_TOP_H / 2;
@@ -913,7 +922,8 @@ export const paintRepoScreen = (ctx: CanvasRenderingContext2D, width: number, he
     if (it.user !== undefined || it.line.k === 'gap') continue;
     const cy = tops[i] + it.h / 2;
     if (cy < clipTop - LH || cy > tBottom + LH) continue;
-    ctx.globalAlpha = it.a;
+    // A new line first opens its row, then its text fades in: drawn from the start it ghosts over the line above (visible in the insert).
+    ctx.globalAlpha = it.prev ? it.a : clamp01((it.a - 0.55) / 0.45);
     const ln = it.line;
     if (ln.k === 'user') {
       ctx.font = L.fT;
@@ -1064,6 +1074,38 @@ export const paintRepoScreen = (ctx: CanvasRenderingContext2D, width: number, he
     ctx.strokeStyle = mix(inert.hot, sys.base, tFocus, lerp(0.26, 0.6, tFocus));
     ctx.stroke();
     if (linger > 0.001) glowStroke(ctx, trace, mind.base, 3, 18 * (0.6 + 0.4 * pulse), linger * 0.75);
+  }
+
+  /* ---------------- full screen: the running game takes the whole display */
+  // A fixed-aspect game on an ultrawide fills the height and leaves black at the sides. Everything else
+  // (the editor, the terminal and whatever the agent is doing in it) is still there, behind it.
+  const fs = smooth(clamp01(s.fullscreen ?? 0));
+  if (fs > 0.001) {
+    const V = VIEWPORT;
+    const k = lerp(1, CH / V.h, fs);
+    const r = {x: lerp(V.x, FULLSCREEN_X, fs), y: lerp(V.y, 0, fs), w: V.w * k, h: V.h * k};
+    ctx.fillStyle = rgba(FULLSCREEN_BARS, fs);
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.clip();
+    if (layer) {
+      // The level from the cached layer, enlarged without smoothing: pixel art stays crisp.
+      const sx = width / CW;
+      const sy = height / CH;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(layer, V.x * sx, V.y * sy, V.w * sx, V.h * sy, r.x, r.y, r.w, r.h);
+      ctx.imageSmoothingEnabled = true;
+    } else {
+      ctx.save();
+      ctx.translate(r.x - V.x * k, r.y - V.y * k);
+      ctx.scale(k, k);
+      paintLevel(ctx, L);
+      ctx.restore();
+    }
+    sprites(r.x, r.y, GPX * k);
+    ctx.restore();
   }
 
   ctx.restore();

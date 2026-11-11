@@ -6,7 +6,7 @@ import {isConcept, type Concept} from './family';
  * reloaded:  /style-lab/02-wrong-project?concept=cinematic&theme=infrared&compare=concept:redesign#c=2
  *
  *   concept   original | redesign | cinematic     which treatment of the scene
- *   theme     one of the five theme ids           visual identity
+ *   theme     one of the theme ids                visual identity
  *   compare   off | concept | concept:<c> | theme:<id>   second, synchronised view
  *             (`concept` alone means "the other treatment", for older links)
  */

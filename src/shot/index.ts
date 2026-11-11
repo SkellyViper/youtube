@@ -11,6 +11,7 @@ export * from './resolve';
 export * from './patch';
 export * from './easing';
 export * from './presets';
+export * from './cameras';
 export * from './runtime';
 
 /** Identity helper for authoring-time type checking. */

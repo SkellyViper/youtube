@@ -6,6 +6,7 @@ import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/addons/utils/SkeletonUtils.js';
 import {useLook, useObjectOffset} from '../../../shot/runtime';
 import {useTheme} from '../../../styles/ThemeContext';
+import {video01} from '../../../styles/video01';
 import type {Vec3} from '../../cyber/three/rig';
 import type {ChairEnvelope, HoloFigureProps, HoloPose} from './HoloFigure';
 
@@ -789,6 +790,8 @@ const sdRoundBox = (p: V, c: V, h: V, r: number) => {
 
 /** SlimMouse (Workstation.tsx): centre height above its base, half sizes (x, y, z), yaw (world). */
 const MOUSE_SHAPE = {lift: 0.016, half: [0.034, 0.018, 0.058] as const, yaw: -0.12} as const;
+/** How far behind the mouse's rear edge the wrist rests in the palm grip (metres). */
+const MOUSE_WRIST_BACK = 0.064;
 /** The seat cushion of MeshChair: thickness, edge radius. The backrest's tilt (degrees). */
 const CUSHION = {thickness: 0.07, radius: 0.028} as const;
 const BACK_TILT = (8 * Math.PI) / 180;
@@ -1042,11 +1045,14 @@ export const solvePerson = (T: PersonTemplate, input: PersonSolveInput): PersonP
     const hover = [0.006, 0.002, 0.006, 0.008].map((h) => h + 0.03 * tap);
     return clearPalm('r', {W, q, ratio: CURL, cMax: [1.1, 1.1, 1.1, 1.1], hover, thumb: local(W, q, thumb), surf: S.keys});
   };
-  // Palm grip on the mouse: palm on its back, fingers over the buttons, thumb on its left side, wrist low.
+  // Palm grip on the mouse: the heel of the hand on the desk behind it, the palm over its back, index and
+  // middle fingertips on the buttons (short of its front edge), thumb on its left side, wrist low.
+  // The wrist sits MOUSE_WRIST_BACK behind the mouse's rear: closer, and the fingers overshoot the front
+  // and curl down onto the desk (the hand swallows the mouse).
   const mouseGoal = (): HandGoal => {
     const {half} = MOUSE_SHAPE;
     const f = S.mouseF;
-    const W = S.mouseC.clone().addScaledVector(f, -(half[2] + 0.026)).addScaledVector(S.mouseR, 0.006);
+    const W = S.mouseC.clone().addScaledVector(f, -(half[2] + MOUSE_WRIST_BACK)).addScaledVector(S.mouseR, 0.006);
     W.y = S.deskY + 0.026;
     const d = f.clone().multiplyScalar(Math.cos(0.06)).addScaledVector(Y, Math.sin(0.06));
     const q = handQ('r', d, 0.1);
@@ -1679,6 +1685,8 @@ const instantiate = (T: PersonTemplate): Instance => {
 
 /* ------------------------------------------------------------------ component */
 
+const FIGURE = video01.figure;
+
 const relTo = (w: Vec3, o: readonly number[]): Vec3 => [w[0] - o[0], w[1] - o[1], w[2] - o[2]];
 
 /**
@@ -1686,10 +1694,11 @@ const relTo = (w: Vec3, o: readonly number[]): Vec3 => [w[0] - o[0], w[1] - o[1]
  *   core  colour of the body's light; emissive intensity = body brightness
  *   rim   colour of the silhouette / contour light; emissive intensity = rim brightness
  */
-export const HoloPerson: React.FC<HoloFigureProps> = ({position, pose = {}, time = 0, keyboard, enter, mouse, chair, lines = 1, sparkle = 1, scan = 1}) => {
+export const HoloPerson: React.FC<HoloFigureProps> = ({position, pose = {}, time = 0, keyboard, enter, mouse, chair, lines = FIGURE.lines, sparkle = FIGURE.sparkle, scan = FIGURE.scan}) => {
   const th = useTheme();
-  const core = useLook('core', {color: th.tone.system.base, emissiveIntensity: 0.4});
-  const rim = useLook('rim', {color: th.tone.system.hot, emissiveIntensity: 2.0});
+  // Levels: src/styles/video01.ts (the figure must not outshine the screen he looks at).
+  const core = useLook('core', {color: th.tone.system.base, emissiveIntensity: FIGURE.core});
+  const rim = useLook('rim', {color: th.tone.system.hot, emissiveIntensity: FIGURE.rim});
   const off = useObjectOffset();
   const {isRendering} = useRemotionEnvironment();
   const advance = useThree((s) => s.advance);

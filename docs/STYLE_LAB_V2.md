@@ -306,3 +306,7 @@ Verification (exact numbers in [`docs/style-lab-v2/PR_BODY.md`](style-lab-v2/PR_
 ## 10. X02 rebuilt as a full shot
 
 X02 (*The wrong project*) is the second scene converted, and the first rebuilt from scratch on the V2 rules: six objects on the legacy stage, a light figure (`HoloFigure`), a clean workstation (`Workstation.tsx`), the story on the screen (`repoScreen.ts`: an editor with his game and an agent terminal whose active tab is the other project), one still main shot and one terminal insert as cut keys in `shot.json`. Details, beats, what is editable and the render commands: [`docs/style-lab-v2/X02_WRONG_PROJECT.md`](style-lab-v2/X02_WRONG_PROJECT.md).
+
+## 11. Video 01's visual language
+
+X02 was approved as the look of the first episode. Its values were extracted into tokens (`src/styles/video01.ts`), a theme (`noir`), a lighting preset ("Legacy / Digital Noir · Video 01"), a stage component and helpers (`src/components/video01`, `screenInsert` in `src/shot/cameras.ts`), and written up with annotated frames, rules and anti-patterns in [`docs/VIDEO_01_VISUAL_LANGUAGE.md`](VIDEO_01_VISUAL_LANGUAGE.md). New Video 01 scenes start there.

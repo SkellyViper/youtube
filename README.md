@@ -13,6 +13,8 @@ Both modes mount the same composition component and read the same timeline. Noth
 
 The included demo is *"Not detected ≠ does not exist"*: 4 scenes, 11 beats, about 38.7 s when exported.
 
+**Video 01 · Legacy / Digital Noir** (the first episode's approved look): extracted from the reference shot X02 *The wrong project*. Guide with exact tokens, lighting, camera rules and anti-patterns: [docs/VIDEO_01_VISUAL_LANGUAGE.md](docs/VIDEO_01_VISUAL_LANGUAGE.md); plan for the remaining scenes: [docs/video-01/SCENE_PLAN.md](docs/video-01/SCENE_PLAN.md); tokens `src/styles/video01.ts`, theme `noir`, kit `src/components/video01`. In the lab it is the first section and a sixth theme (`?theme=noir`, `--theme=noir`).
+
 **Style Lab V2** (current direction): fewer objects, a still camera, the legacy Tron-like look, and a **shot editor** (`/style-lab/<scene>/edit`) for editing 3D shots without rewriting them: hierarchy, object inspector, lights and presets, camera lock, beat timing, save to repo, export/import, render the same file. See [docs/STYLE_LAB_V2.md](docs/STYLE_LAB_V2.md) and the audit of the earlier experiments in [docs/style-lab-v2/AUDIT.md](docs/style-lab-v2/AUDIT.md).
 
 The **Style Lab** (`/style-lab`) holds the channel's visual language in motion: six **cinematic 3D experiments** (documentary-style reenactments: a real room, a data hall, cameras that travel), ten story-driven 2D scenes from the first episode, and the original ten experiments, all switchable between five visual identities and comparable beat for beat. See [docs/CINEMATIC_VISUAL_LANGUAGE.md](docs/CINEMATIC_VISUAL_LANGUAGE.md) (the cinematography playbook), [docs/FERN_VISUAL_RESEARCH.md](docs/FERN_VISUAL_RESEARCH.md) (the research behind it), [docs/cinematic/](docs/cinematic/) (critique, builder brief, quality report), [docs/STYLE_LAB_REDESIGN.md](docs/STYLE_LAB_REDESIGN.md) (the 2D redesign, themes, gallery) and [docs/STYLE_LAB.md](docs/STYLE_LAB.md) (the original experiments).
@@ -107,7 +109,7 @@ src/
   videos/        Episode definitions + composition components + registry.ts
   player/        Presentation app: usePresenter state machine, keyboard, HUD; lab/ = Style Lab gallery; lab/editor/ = shot editor
   remotion/      Remotion entry point (registerRoot) and <Composition> registrations
-  styles/        theme.ts (provisional design tokens), cyber.ts (Style Lab tokens), motion.ts, fonts.ts
+  styles/        theme.ts (provisional design tokens), cyber.ts (Style Lab tokens), video01.ts (Video 01 tokens), motion.ts, fonts.ts
 scripts/         render.mjs, stills.mjs, verify-video.mjs, lab.mjs / story.mjs / cine.mjs (Style Lab tooling), dev/preview.mjs
 tests/           Playwright specs
 ```

@@ -9,7 +9,7 @@
 //   node scripts/story.mjs sheet                                        contact sheet of the rendered MP4s / stills
 //   node scripts/story.mjs info 04-replication                          beat sheet (frames)
 //
-// Options: --theme=neon|infrared|glacial|ghost|spectral  --concept=redesign|original
+// Options: --theme=neon|infrared|glacial|ghost|spectral|noir  --concept=redesign|original
 //          --fps=60|30  --concurrency=N  --scale=0.5  --png
 // Environment: REMOTION_BROWSER_EXECUTABLE, REMOTION_GL (see scripts/browser.mjs).
 import {execFileSync, spawnSync} from 'node:child_process';
@@ -29,7 +29,7 @@ const positional = args.slice(1).filter((a) => !a.startsWith('--'));
 const flag = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 const has = (name) => args.includes(`--${name}`);
 
-const THEMES = ['neon', 'infrared', 'glacial', 'ghost', 'spectral'];
+const THEMES = ['neon', 'infrared', 'glacial', 'ghost', 'spectral', 'noir'];
 const chromiumOptions = {gl: flag('gl') ?? defaultGl};
 const outRoot = path.join(root, 'out', 'story');
 const fps = Number(flag('fps') ?? 60);

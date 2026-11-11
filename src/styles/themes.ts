@@ -20,7 +20,7 @@ import {cyber} from './cyber';
 
 export type ToneTriplet = {readonly base: string; readonly hot: string; readonly deep: string};
 
-export type ThemeId = 'neon' | 'infrared' | 'glacial' | 'ghost' | 'spectral';
+export type ThemeId = 'neon' | 'infrared' | 'glacial' | 'ghost' | 'spectral' | 'noir';
 
 export type Theme = {
   readonly id: ThemeId;
@@ -247,9 +247,55 @@ export const THEMES: Readonly<Record<ThemeId, Theme>> = {
     reflect: 0.7,
     transition: 'mist',
   },
+  /**
+   * Video 01 · Legacy / Digital Noir: the locked identity of the first
+   * episode (src/styles/video01.ts, docs/VIDEO_01_VISUAL_LANGUAGE.md).
+   *
+   * Its palette is the lab's obsidian-neon hexes, taken from cyber.ts and
+   * frozen here: `neon` stays the lab's sandbox and may drift, this may not
+   * without a review of the episode. Two deliberate differences:
+   *   safe   bright cyan instead of green: the episode has three hues
+   *          (blue, purple, red); "verified" is the system tone at its brightest
+   *   human  amber is kept, but only for art inside a screen (the game's
+   *          coins); it is never a light or an interface colour
+   */
+  noir: {
+    id: 'noir',
+    name: 'Legacy / Digital Noir',
+    mood: 'Video 01. Near-black void, a light figure, blue systems, purple agents, red only for threat.',
+    color: {
+      void: '#04050A',
+      abyss: '#070A14',
+      slate: '#1A2032',
+      steel: '#2B3654',
+      haze: '#16226A',
+      white: '#EAF2FF',
+      text: '#C4CFE6',
+      dim: '#66718F',
+    },
+    tone: {
+      system: {base: '#2E9BFF', hot: '#A6D6FF', deep: '#0B3C9E'},
+      mind: {base: '#8B3DFF', hot: '#CDB2FF', deep: '#3B1290'},
+      threat: {base: '#FF2A3C', hot: '#FF949C', deep: '#7C0F1B'},
+      safe: {base: '#4FD8FF', hot: '#C9F3FF', deep: '#0C4E6E'},
+      human: {base: '#FFB45C', hot: '#FFE1B8', deep: '#7A4410'},
+      inert: {base: '#2B3654', hot: '#66718F', deep: '#1A2032'},
+    },
+    glow: 1,
+    bloom: {strength: 0.85, radius: 0.72, threshold: 0.92},
+    fog: {color: '#05060D', density: 0.018},
+    grade: {grain: 0.055, vignette: 0.5, scanlines: 0},
+    line: 1.25,
+    panel: 'brackets',
+    radius: 6,
+    backdrop: 'horizon',
+    font: label,
+    reflect: 0.8,
+    transition: 'bracket',
+  },
 };
 
-export const THEME_IDS: readonly ThemeId[] = ['neon', 'infrared', 'glacial', 'ghost', 'spectral'];
+export const THEME_IDS: readonly ThemeId[] = ['neon', 'infrared', 'glacial', 'ghost', 'spectral', 'noir'];
 export const DEFAULT_THEME: ThemeId = 'neon';
 
 export const isThemeId = (v: unknown): v is ThemeId => typeof v === 'string' && (THEME_IDS as readonly string[]).includes(v);

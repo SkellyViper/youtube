@@ -1,5 +1,6 @@
-import {cyber} from '../../../styles/cyber';
-import {defineShot, rigLights, type ShotPatch} from '../../../shot';
+import {video01} from '../../../styles/video01';
+import {noirStageObjects} from '../../../components/video01/NoirStage';
+import {defineShot, noirRig, noirStage, type ShotPatch} from '../../../shot';
 import approved from './shot.json';
 import {CHAIR, DESK, KEYBOARD, MONITOR, MOUSE, SHOT_A, SHOT_B} from './layout';
 
@@ -12,9 +13,8 @@ import {CHAIR, DESK, KEYBOARD, MONITOR, MOUSE, SHOT_A, SHOT_B} from './layout';
  * a very slight push-in) for the send beat, and a cut back to Shot A. Edit it
  * on the shot editor's timeline; "Code defaults" returns to the single shot.
  */
-// The Legacy neon rig, with the rim brought down so it grazes the silhouettes instead of washing the desk top.
-const rig = rigLights({key: 0.75, fill: 0.18, rim: 2.2, ambient: 0.28, sky: 0.3});
-const lowRim = {...rig.rim, defaults: {...rig.rim.defaults, position: [-2.6, 2.1, -4.4] as const, target: [0, 0.95, 0.6] as const}};
+// This shot is the reference implementation of Video 01's look: rig, stage and edge levels come from src/styles/video01.ts.
+const E = video01.edges;
 
 export const shot = defineShot({
   id: 'cine-02-wrong-project',
@@ -24,8 +24,7 @@ export const shot = defineShot({
   approvedPath: 'src/scenes/cinematic/02-wrong-project/shot.json',
   objects: {
     // ---- the legacy stage
-    horizon: {label: 'Horizon haze', group: 'Stage', purpose: 'Legacy look: the cold line where the floor meets the void.', slots: {haze: 'Haze (emissive intensity = strength)'}},
-    'stage-floor': {label: 'Obsidian floor', group: 'Stage', purpose: 'Legacy look: dark glass floor with a fading hairline grid; catches the shadows.', slots: {glass: 'Glass', grid: 'Grid (emissive intensity = strength)'}},
+    ...noirStageObjects(),
 
     // ---- the workstation
     desk: {
@@ -40,7 +39,7 @@ export const shot = defineShot({
       group: 'Workstation',
       purpose: 'Explains: the two repositories, the agent, and where the request goes.',
       pivot: MONITOR.center,
-      defaults: {edges: {enabled: true, color: cyber.color.blue, intensity: 0.55, threshold: 40}},
+      defaults: {edges: {enabled: true, color: E.color, intensity: E.primary, threshold: E.threshold}},
       slots: {body: 'Bezel, housing, stand', screen: 'Picture (colour tints, emissive intensity = brightness)'},
     },
     keyboard: {label: 'Keyboard', group: 'Workstation', purpose: 'Supports typing and the Enter that sends it.', pivot: KEYBOARD.position, slots: {body: 'Case', keys: 'Keys'}},
@@ -52,7 +51,7 @@ export const shot = defineShot({
       group: 'People',
       purpose: 'He sits. Dark matter, so it never merges with the light figure.',
       pivot: CHAIR.floor,
-      defaults: {edges: {enabled: true, color: cyber.color.blue, intensity: 0.45, threshold: 40}},
+      defaults: {edges: {enabled: true, color: E.color, intensity: E.secondary, threshold: E.threshold}},
       slots: {frame: 'Frame, arms, base', cushion: 'Seat + arm pads', mesh: 'Back mesh', trim: 'Backrest hairline (emissive intensity = strength)'},
     },
     developer: {
@@ -68,9 +67,8 @@ export const shot = defineShot({
     },
   },
   lights: {
-    // The Legacy neon rig: a cold rim draws silhouettes, a soft key gives the furniture form and shadows.
-    ...rig,
-    rim: lowRim,
+    // The Video 01 rig: a low cold rim draws silhouettes, a soft key gives the furniture form and shadows.
+    ...noirRig(),
     'glow-screen': {label: 'Screen glow', role: 'practical', defaults: {kind: 'practical', intensity: 1, color: ''}},
     'glow-agent': {label: 'Agent light (cloud-ops side)', role: 'practical', defaults: {kind: 'practical', intensity: 1, color: ''}},
     'figure-glow': {label: 'Figure spill', role: 'practical', defaults: {kind: 'practical', intensity: 1, color: ''}},
@@ -87,7 +85,7 @@ export const shot = defineShot({
       'shot-b': {label: 'B · Terminal insert', position: SHOT_B.position, target: SHOT_B.target, fov: SHOT_B.fov, roll: 0},
     },
   },
-  stage: {exposure: 1, bloom: {enabled: true, strength: cyber.bloom.strength, radius: cyber.bloom.radius, threshold: cyber.bloom.threshold}, fog: cyber.fog.density, shadows: true, grade: true},
+  stage: noirStage(),
   motions: {
     // wp-type · Establish (Shot A): his game on the left, the terminal on the right; he types a task for his agent
     'type-prompt': {label: 'He types the task into the terminal (right)', beat: 'wp-type', from: 0.3, until: 3.9, easing: 'linear'},
@@ -101,9 +99,9 @@ export const shot = defineShot({
     'focus-left': {label: 'He clicks into the game window', beat: 'wp-carry', from: 1.3, until: 1.6, easing: 'out'},
     'play-game': {label: 'He presses play and tests his game', beat: 'wp-carry', from: 1.9, until: 2.2, easing: 'out'},
     'work-spreads': {label: 'The agent keeps going, unattended', beat: 'wp-carry', from: 0, until: null, easing: 'linear'},
-    // wp-hold · Casual continuation, ominous hold (Shot A)
-    'lean-back': {label: 'He leans back, still playing', beat: 'wp-hold', from: 0.5, until: 2.8, easing: 'inOut'},
-    'work-everywhere': {label: 'Still working in cloud-ops', beat: 'wp-hold', from: 0, until: 3.2, easing: 'inOut'},
-    linger: {label: 'The purple stays on the right (ominous hold)', beat: 'wp-hold', from: 0.8, until: null, easing: 'inOut'},
+    // wp-hold · He forgets it (Shot A): the agent is still working when the game goes full screen over it
+    'work-everywhere': {label: 'Still working in cloud-ops', beat: 'wp-hold', from: 0, until: 2.8, easing: 'inOut'},
+    linger: {label: 'Purple on the right: the tab pulses, the desk catches it', beat: 'wp-hold', from: 0, until: 0.9, easing: 'inOut'},
+    fullscreen: {label: 'He makes the game full screen: the terminal is behind it', beat: 'wp-hold', from: 1.4, until: 1.75, easing: 'inOut'},
   },
 });
