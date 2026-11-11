@@ -401,9 +401,44 @@ test.describe('Shot editor (Style Lab V2)', () => {
     expect(flown.position).not.toEqual([1.85, 1.62, 2.45]);
   });
 
-  test('X02: the code camera converts to keyframes that reproduce it', async ({page}) => {
+  test('X02: an editable shot of the workstation; one still main shot and one terminal insert', async ({page}) => {
     watch(page);
     await page.goto('/style-lab/cine-02-wrong-project/edit');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForFunction(() => {
+      const w = window as unknown as EditorWindow;
+      return w.__presenter?.frame >= 0 && Boolean(w.__shotEditor);
+    }, null, {timeout: 90_000});
+    await settle(page);
+    // Six objects on the legacy stage, all editable; nothing else.
+    for (const id of ['developer', 'chair', 'desk', 'monitor', 'keyboard', 'mouse', 'horizon', 'stage-floor']) {
+      await expect(page.getByTestId(`node-${id}`)).toBeVisible();
+    }
+    for (const id of ['key', 'rim', 'glow-screen', 'glow-agent']) await expect(page.getByTestId(`node-light-${id}`)).toBeVisible();
+    const objects = await page.evaluate(() => Object.keys((window as unknown as EditorWindow).__shotEditor.state.objects).sort());
+    expect(objects).toEqual(['chair', 'desk', 'developer', 'horizon', 'keyboard', 'monitor', 'mouse', 'stage-floor']);
+    // The camera track: A, a cut to the insert for the send beat, a cut back to A.
+    const {patch, mode} = await editor(page);
+    expect(mode).toBe('keys');
+    const keys = Object.values(patch.camera.keys as Record<string, {beat: string; cut: boolean}>);
+    expect(keys.filter((k) => k.cut).map((k) => k.beat).sort()).toEqual(['wp-carry', 'wp-send']);
+    // Sky and horizon to the right of him: only a camera change can alter it.
+    const band = {x: 0.55, y: 0.02, w: 0.43, h: 0.14};
+    await goTo(page, 1);
+    const a1 = await snap(page, 'x02-c1', band);
+    await goTo(page, 2);
+    const b2 = await snap(page, 'x02-c2-insert', band);
+    await goTo(page, 4);
+    const a4 = await snap(page, 'x02-c4', band);
+    // Shot A is the same still frame at checkpoints 1 and 4; the insert is a different picture.
+    expect(await diff(page, a1, a4)).toBeLessThan(0.3);
+    expect(await diff(page, a1, b2)).toBeGreaterThan(3);
+  });
+
+  test('X03: the code camera converts to keyframes that reproduce it', async ({page}) => {
+    watch(page);
+    await page.goto('/style-lab/cine-03-still-running/edit');
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.waitForFunction(() => {
@@ -413,7 +448,7 @@ test.describe('Shot editor (Style Lab V2)', () => {
     await expect(page.getByTestId('cam-badge')).toContainText('the scene');
     await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(560));
     await settle(page, 1200);
-    const code = await snap(page, 'x02-code-560');
+    const code = await snap(page, 'x03-code-560');
     await page.getByTestId('node-camera').click();
     await page.getByTestId('bake').click();
     await page.waitForFunction(() => (window as unknown as EditorWindow).__shotEditor.state.camera.mode === 'keys', null, {timeout: 120_000});
@@ -421,7 +456,7 @@ test.describe('Shot editor (Style Lab V2)', () => {
     expect(n).toBeGreaterThan(10);
     await page.evaluate(() => (window as unknown as EditorWindow).__shotEditor.seek(560));
     await settle(page, 1200);
-    const baked = await snap(page, 'x02-baked-560');
+    const baked = await snap(page, 'x03-baked-560');
     expect(await diff(page, code, baked)).toBeLessThan(1.5);
   });
 });

@@ -1,4 +1,86 @@
 {
-  "version": 1,
-  "shot": "cine-02-wrong-project"
+  "camera": {
+    "keys": {
+      "a-open": {
+        "beat": "wp-type",
+        "cut": false,
+        "ease": "linear",
+        "fov": 28,
+        "label": "A \u00b7 Over the shoulder",
+        "position": [
+          1.85,
+          1.5,
+          1.85
+        ],
+        "roll": 0,
+        "t": 0,
+        "target": [
+          -0.05,
+          0.92,
+          -0.15
+        ]
+      },
+      "a-return": {
+        "beat": "wp-carry",
+        "cut": true,
+        "ease": "linear",
+        "fov": 28,
+        "label": "A \u00b7 Over the shoulder",
+        "position": [
+          1.85,
+          1.5,
+          1.85
+        ],
+        "roll": 0,
+        "t": 0.01,
+        "target": [
+          -0.05,
+          0.92,
+          -0.15
+        ]
+      },
+      "b-insert": {
+        "beat": "wp-send",
+        "cut": true,
+        "ease": "linear",
+        "fov": 26,
+        "label": "B \u00b7 Terminal insert",
+        "position": [
+          0.35,
+          1.25,
+          0.75
+        ],
+        "roll": 0,
+        "t": 0.01,
+        "target": [
+          0.295,
+          1.075,
+          -0.233
+        ]
+      },
+      "b-push": {
+        "beat": "wp-send",
+        "cut": false,
+        "ease": "inOut",
+        "fov": 26,
+        "label": "B \u00b7 Slight push-in",
+        "position": [
+          0.345,
+          1.239,
+          0.69
+        ],
+        "roll": 0,
+        "t": 4.5,
+        "target": [
+          0.295,
+          1.075,
+          -0.233
+        ]
+      }
+    },
+    "mode": "keys"
+  },
+  "note": "Two shots: A (main, still) and B (terminal insert, send beat only, very slight push-in).",
+  "shot": "cine-02-wrong-project",
+  "version": 1
 }

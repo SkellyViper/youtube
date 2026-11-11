@@ -1,0 +1,8 @@
+john.glb is derived from "Universal Base Characters" (Standard, free version) by Quaternius
+(https://quaternius.com/packs/universalbasecharacters.html), released under CC0 1.0 Universal
+(https://creativecommons.org/publicdomain/zero/1.0/).
+
+Changes for the explainer engine (X02 "The wrong project"): Superhero_Male_FullBody body mesh and
+its 65-bone rig, merged with the Hair_SimpleParted hairstyle (rigged to the same skeleton); eyes,
+eyebrows, all textures and original materials removed (the scene renders the body with its own
+holographic light shader).

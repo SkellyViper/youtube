@@ -1,6 +1,5 @@
-import {CineGrade} from '../../../components/cinematic/episode';
 import {defineEpisode} from '../../../engine';
-import {applyShotBeats, shotComposition} from '../../../shot';
+import {applyShotBeats, shotComposition, ShotGrade} from '../../../shot';
 import {WrongProjectScene} from './WrongProjectScene';
 import {shot} from './shot';
 
@@ -9,7 +8,8 @@ export const baseEpisode = defineEpisode({
   id: 'cine-02-wrong-project',
   title: 'X02 · The wrong project',
   leadIn: 0.3,
-  defaultHold: 0.7,
+  // Background footage: no frozen pauses between beats in the export (the live presenter still holds at every checkpoint).
+  defaultHold: 0,
   tail: 0.6,
   background: '#04050A',
   scenes: [
@@ -17,16 +17,16 @@ export const baseEpisode = defineEpisode({
       id: 'wrong-project',
       title: 'The wrong project',
       beats: [
-        {id: 'wp-tab', label: 'The cloud tab is active', duration: 2.8, notes: 'Close on the agent screen. The prompt with the enemy sketch is ready. The camera pushes in: the active project is the cloud one.'},
-        {id: 'wp-send', label: 'Send: the message leaves down the cable', duration: 2.6, notes: 'Enter. The bubble posts; a pulse runs down the monitor cable and along the skirting to the wall port. The camera tilts down with it. The game shows an empty slot.'},
-        {id: 'wp-travel', label: 'Out of the window, across the district', duration: 3.8, notes: 'One continuous shot: the camera leaves through the window and travels with the pulse along the street toward the data centre.'},
-        {id: 'wp-arrive', label: 'Into the hall, into one rack', duration: 3.2, hold: 1.3, notes: 'The roof opens for the camera; the pulse runs the tray and drops into a rack. Its LEDs turn purple and the agent ignites in its bay.'},
+        {id: 'wp-type', label: 'Establish: his game, and a task for his agent', duration: 4.5, notes: 'Shot A. John at his desk. Left of the ultrawide: his game (my-game) in the engine editor. Right: a terminal with two tabs, my-game and cloud-ops; cloud-ops is active. He types a task for his agent: a new enemy that hides, scavenges, multiplies and ambushes the player.'},
+        {id: 'wp-send', label: 'Trigger: Enter, in the cloud-ops tab', duration: 4.5, notes: 'Shot B, the terminal insert. The task sits in the prompt, ~/cloud-ops under it. Enter. The agent searches for the game files, finds an infrastructure repo, and creates enemies/scavenger.gd in ~/cloud-ops.'},
+        {id: 'wp-carry', label: 'Outcome: it runs in cloud-ops; he goes back to his game', duration: 4.5, notes: 'Shot A. The agent keeps working on the right. He does not react: he takes the mouse, clicks his game and presses play.'},
+        {id: 'wp-hold', label: 'Casual continuation, ominous hold', duration: 4.5, hold: 1.0, notes: 'Shot A. He leans back and plays his game. On the right the agent is still running in cloud-ops (terraform), a faint purple on that side of the desk.'},
       ],
     },
   ],
   layers: [
     {id: 'world', component: WrongProjectScene, z: 1},
-    {id: 'grade', component: CineGrade, z: 100},
+    {id: 'grade', component: ShotGrade, z: 100},
   ],
 });
 

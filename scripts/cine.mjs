@@ -187,7 +187,7 @@ const commands = {
         const files = [];
         for (const frame of frames) {
           const output = path.join(outDir, `${slug}-${theme}-f${pad(frame)}.${png ? 'png' : 'jpg'}`);
-          await renderStill({composition: comp, serveUrl, frame, output, inputProps: propsFor(theme), imageFormat: png ? 'png' : 'jpeg', ...(png ? {} : {jpegQuality: 90}), scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, overwrite: true});
+          await renderStill({composition: comp, serveUrl, frame, output, inputProps: propsFor(theme), imageFormat: png ? 'png' : 'jpeg', ...(png ? {} : {jpegQuality: 90}), scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, overwrite: true, timeoutInMilliseconds: 120000});
           files.push(output);
           console.log(`[still] ${path.relative(root, output)}`);
         }
